@@ -1,0 +1,30 @@
+# LocalLeaf Ignore File
+# Patterns work like .gitignore
+# Use $MAIN_PDF to reference the main PDF file from settings
+
+# Don't sync the compiled PDF (prevents corruption during local compile)
+$MAIN_PDF
+
+# Hidden files and directories
+.*
+.*/**
+
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.run.xml
+*.synctex.gz
+*.synctex(busy)
+*.toc
+*.lof
+*.lot
+*.xdv
+
+# LocalLeaf config directory
+.localleaf/**

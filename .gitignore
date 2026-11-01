@@ -1,0 +1,8 @@
+.localleaf/
+*.aux
+*.log
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+conference_101719_lm8_repeat_ppl.pdf
