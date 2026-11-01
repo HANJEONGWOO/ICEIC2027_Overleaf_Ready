@@ -1,5 +1,9 @@
-% ICEIC 2027 -- English working draft v3, 2026-10-27.
-% Based on conference_101719_lm8_repeat.tex (v2); title and author edits preserved.
+% III-B: four boxed logical equations; Eq. (4) contrasts LM K4 and Structured K8.
+% The symbol p denotes bit width; b is an 8-bit code, not a sign bit.
+% Reconstruction-level terminology and level notation are consistent throughout.
+% Existing FP16 rounding, byte mapping, tables and experimental values retained.
+% ICEIC 2027 -- English working draft v6: mixed K4/K8 levels and clearer Section III-B equations, 2026-10-31.
+% Based on conference_101719_background_short_en.tex (v5).
 % Source branch: exp/structured-k8-lm8-repeat.
 % Matched PPL follow-up: b438a098c6025df1e6928fd2c504381dcffef448.
 % Retained repeated timings: 565acc7b11076a1635fce7e076eb8cb9b4a27317.
@@ -43,11 +47,28 @@ KV cache, quantization, mobile NPU, piecewise-uniform quantization, Hexagon HVX
 \section{Introduction}
 Autoregressive large language models retain attention keys and values in a key--value (KV) cache. Quantizing this cache can reduce its storage and data-transfer requirements, but effective deployment also depends on the cost of producing and consuming the compressed representation. KIVI illustrates the importance of treating key and value distributions differently~\cite{kivi}. TurboQuant studies random-rotation-based scalar quantization and distinguishes reconstruction error from inner-product distortion~\cite{turboquant}. Neither a nominal bit width nor a scalar distortion value alone determines the latency of a particular mobile implementation.
 
-Our work builds upon a TurboQuant implementation integrated into the Qualcomm AI Hub Models inference pipeline~\cite{artifact}. Its Lloyd--Max (LM) encoder uses comparison trees and centroid-selection subgraphs; larger codebooks increase this graph-level work. On the decoder side, centroid lookup and layout conversion also consume accelerator resources. We investigate whether a restricted codebook can simplify both paths while retaining useful language-model quality.
+Our work builds upon a TurboQuant implementation integrated into the Qualcomm AI Hub Models inference pipeline~\cite{artifact}. Its Lloyd--Max (LM) encoder uses comparison trees and reconstruction-level selection subgraphs; larger codebooks increase this graph-level work. On the decoder side, level lookup and layout conversion also consume accelerator resources. We investigate whether a restricted codebook can simplify both paths while retaining useful language-model quality.
 
 Piecewise quantization is established prior art. PWLQ divides a distribution into regions with separate uniform grids~\cite{pwlq}, and PTQ4ViT introduces twin uniform quantization for vision-transformer activations~\cite{ptq4vit}. Building on these established ideas, our contribution is a hardware-oriented specialization for a rotated KV cache: an arithmetic encoder, a byte-compatible HVX decoder with an explicit numerical contract, and controlled on-device comparisons against converged LM and single-spacing uniform baselines. Mixed key/value precision and layer placement serve as deployment choices supporting this implementation.
 
+\section{Background and Motivation}
+\label{sec:background}
+\subsection{Key and Value Quantization Errors}
+Scaled dot-product attention is~\cite{attention}
+\begin{equation}
+ O=\operatorname{softmax}\!\left(\frac{QK^\top}{\sqrt{d}}\right)V,
+ \label{eq:bg-attention}
+\end{equation}
+where $Q$, $K$, and $V$ are queries, keys, and values, and $d$ is the key dimension; causal masking is omitted. Key quantization changes the dot products and thus the normalized exponential softmax weights. In contrast, value errors enter the weighted sum linearly for fixed $Q$ and $K$. This motivates asymmetric K/V precision, without implying that key errors always dominate.
+
+\subsection{Layer-Wise Quantization Sensitivity}
+KV quantization sensitivity varies across layers~\cite{kvtuner}, motivating higher precision in selected layers under a fixed cache budget. We mix K8 and K4 to maintain average K6 precision, with V2 throughout. Odd and Boundary are tested placements, not presumed optima; comparisons use matched masks.
+
+\subsection{Packing and Scalar-Index Costs}
+Two- and four-bit codes divide a byte evenly, whereas eight-bit codes use direct byte storage. Three-, five-, six-, and seven-bit codes may cross byte boundaries and need fragment assembly. Separately, the inherited LM encoder incurs bit-width-dependent comparison-tree and reconstruction-level selection costs~\cite{artifact}. Structured K8 uses byte storage and arithmetic indexing/restoration; K4/V2 retain packing overhead. Thus, nominal bit width alone does not determine execution cost.
+
 \section{Structured Quantization and Implementation}
+\label{sec:method}
 \subsection{Rotated, Norm-Corrected Cache Representation}
 For a nonzero key vector $x\in\mathbb{R}^{d}$, the inherited codec computes
 \begin{equation}
@@ -56,39 +77,51 @@ For a nonzero key vector $x\in\mathbb{R}^{d}$, the inherited codec computes
 \end{equation}
 where $R$ is a fixed orthogonal matrix and $d=128$. Dense QR-generated rotations use seeds 42 and 542 for keys and values, respectively; matrix generation occurs offline. The experiments retain norm correction and disable the quantized Johnson--Lindenstrauss (QJL) residual-correction stage. Thus, this implementation is not the full inner-product-unbiased TurboQuant construction~\cite{turboquant}.
 
-Let $\hat c$ be the signed centroid vector selected for $y$. Conceptually, the effective scale and restored rotated coordinates are
+Let $\hat{\ell}$ denote the vector of signed reconstruction levels selected for $y$. Conceptually, the effective scale and restored rotated coordinates are
 \begin{equation}
- s_{\mathrm{eff}}=\fl\!\left(n/\lVert\hat c\rVert_2\right),
- \qquad \hat z_i=\fl(s_{\mathrm{eff}}\hat c_i).
+ s_{\mathrm{eff}}=\fl\!\left(n/\lVert\hat{\ell}\rVert_2\right),
+ \qquad \hat z_i=\fl(s_{\mathrm{eff}}\hat{\ell}_i).
  \label{eq:scale}
 \end{equation}
 Here $\fl$ denotes rounding to IEEE half precision. The implementation retains its existing guards and FP16 operation boundaries; zero vectors restore to zero through a zero scale. The surrounding attention rotation and layout policy is unchanged. The new native decoder produces scale-corrected rotated coordinates, rather than introducing a new attention algorithm.
 
-\subsection{Two-Region Codebook and Arithmetic Indexing}
-Structured K8 represents a magnitude by one region bit $r\in\{0,1\}$ and a six-bit local index $k\in\{0,\ldots,63\}$. Each region has offset $a_r$ and spacing $\Delta_r$. Its deployed positive centroid is
+\subsection{Quantization Levels and Arithmetic Indexing}
+The proposed key cache retains Lloyd--Max quantization for K4 and uses Structured quantization for K8. Let $p$ denote the bit width and $\mathcal{L}_4^+$ the eight positive reconstruction levels of the symmetric, 16-level LM4 codebook. Before sign restoration, the level rule is
 \begin{equation}
- c^+_{r,k}=\fl\!\left(\fl(k\Delta_r)+a_r\right).
- \label{eq:centroid}
+ \boxed{\ell_p^+(j)=\begin{cases}
+  \mathcal{L}_4^+[j],&p=4,\\
+  a_r+k\Delta_r,&p=8.
+ \end{cases}}
+ \label{eq:level}
 \end{equation}
-The negative half is obtained by sign reflection. Four shared coefficients are fitted offline by analytically integrated scalar mean-squared error (MSE) under $\mathcal{N}(0,1/128)$, with nine fixed initializations and ordering/positive-spacing constraints. No observed KV samples or model perplexity select these coefficients. This Gaussian model is a design approximation, not a claim about the exact empirical distribution or global optimality.
+For K4, $j\in\{0,\ldots,7\}$ selects a frozen LM level; the existing threshold-based encoder is unchanged. For K8, $j=64r+k$, where $r\in\{0,1\}$ selects a region and $k\in\{0,\ldots,63\}$ selects its local level. Here $a_r$ is the region's first level and $\Delta_r$ its spacing. Negative levels follow by sign reflection. The K8 expression describes the grid before rounding; deployed multiplication and addition are separately rounded to FP16. This rule describes the proposed key cache, not the separate LM8 or Uniform K8 comparison configurations; values remain LM V2.
 
-The frozen FP16 offsets are $a_0=0.00089263916015625$ and $a_1=0.1268310546875$; the spacings are $\Delta_0=0.001956939697265625$ and $\Delta_1=0.00376129150390625$. The region boundary $\tau$ is the midpoint between $c^+_{0,63}$ and $c^+_{1,0}$. For magnitude $m=|y_i|$, the logical index rule is
-\begin{align}
- r &= \mathbf{1}[m>\tau], \nonumber\\
- k &= \clip\!\left(\left\lfloor (m-a_r)\Delta_r^{-1}+\tfrac12\right\rfloor,0,63\right).
- \label{eq:index}
-\end{align}
-Execution uses the stored reciprocal and explicit intermediate rounding, so this logical expression is not a cross-precision bit-exactness claim. Arithmetic ties follow the floor rule, not LM's lower-index tie convention.
+The four Structured coefficients are fitted offline by analytically integrated scalar MSE under $\mathcal{N}(0,1/128)$, using nine fixed initializations and ordering/positive-spacing constraints, without KV samples or PPL-based tuning. This is a design approximation, not a claim of exact empirical fit or global optimality. The frozen offsets are $a_0=0.00089263916015625$ and $a_1=0.1268310546875$; the spacings are $\Delta_0=0.001956939697265625$ and $\Delta_1=0.00376129150390625$.
 
-Writing $j=64r+k$, the stored byte is
+\emph{K8 region selection.} For one rotated coordinate $y$, let $m=|y|$. The boundary $\tau$ is the midpoint between the deployed, FP16-rounded levels at $(r,k)=(0,63)$ and $(1,0)$:
 \begin{equation}
- b_i=\begin{cases}
- 128+j,&y_i\geq0,\\
- 127-j,&y_i<0.
- \end{cases}
+ \boxed{r=\begin{cases}
+  0,&m\leq\tau,\\
+  1,&m>\tau.
+ \end{cases}}
+ \label{eq:region}
+\end{equation}
+\emph{K8 local index.} Subtract the region offset, divide by its spacing, round, and clip:
+\begin{equation}
+ \boxed{k=\clip\!\left(\left\lfloor(m-a_r)\dfrac{1}{\Delta_r}+0.5\right\rfloor,0,63\right)}
+ \label{eq:index}
+\end{equation}
+Here $\clip(\cdot,0,63)$ limits the index to 0--63. Execution retains the stored reciprocal and intermediate FP16 rounding. In this logical rule, half-step ties round upward, unlike LM's lower-index convention; it is not a cross-precision bit-exactness claim.
+
+\emph{K8 stored byte and sign.} The magnitude index $j=64r+k$ spans 0--127. Its stored code is
+\begin{equation}
+ \boxed{b=\begin{cases}
+  128+j,&y\geq0,\\
+  127-j,&y<0.
+ \end{cases}}
  \label{eq:byte}
 \end{equation}
-This reflection preserves an ascending symmetric byte-to-centroid interface. Negative region/local fields must be reflected before decoding. Each coordinate is stored directly as UINT8; K8 requires no sub-byte packing. K4 and V2 still use their existing packed representations.
+The symbol $b$ denotes the \emph{complete eight-bit code}, not a sign bit. Its most significant bit is 1 for nonnegative inputs (codes 128--255) and 0 for negative inputs (codes 0--127). The lower seven bits contain $j$ or its reflection $127-j$, respectively, ordering codes from the most negative to the most positive level. For example, $j=5$ gives $b=133$ (\texttt{10000101}) for $y\geq0$ and $b=122$ (\texttt{01111010}) for $y<0$. The decoder recovers $j$ as $b-128$ or $127-b$, then obtains the region and local index. K8 uses one UINT8 per coordinate, without an additional sign bit or sub-byte packing; K4/V2 retain their existing packing.
 
 \begin{figure}[t]
 \centering
@@ -110,7 +143,7 @@ This reflection preserves an ascending symmetric byte-to-centroid interface. Neg
 \end{figure}
 
 \subsection{HVX Decoder and Storage Budget}
-The encoder is lowered to QNN HTP graph operations. The native HVX decoder extracts the magnitude code, selects a region's coefficients, reconstructs the centroid with separate FP16 multiply/add instructions, restores its sign, and multiplies by the effective scale. A 128-byte input load produces two 128-byte FP16 output vectors. The implementation avoids centroid-table loads and per-coordinate scalar loops. The coefficient payload is eight bytes, versus 512 bytes for an explicit 256-entry FP16 codebook; this is a codebook-storage comparison, not a measured total-memory reduction. Fusing the multiply and add would change the prescribed rounding and is not used.
+The encoder is lowered to QNN HTP graph operations. The native HVX decoder extracts the magnitude code, selects a region's coefficients, reconstructs the level with separate FP16 multiply/add instructions, restores its sign, and multiplies by the effective scale. A 128-byte input load produces two 128-byte FP16 output vectors. The implementation avoids level-table loads and per-coordinate scalar loops. The coefficient payload is eight bytes, versus 512 bytes for an explicit 256-entry FP16 codebook; this is a codebook-storage comparison, not a measured total-memory reduction. Fusing the multiply and add would change the prescribed rounding and is not used.
 
 Both tested placements assign K8 to 14 of Qwen3-1.7B's 28 layers, LM K4 to the other 14, and LM V2 throughout. \emph{Odd placement} uses zero-based layers $1,3,\ldots,27$; \emph{Boundary placement} uses layers $0$--$6$ and $21$--$27$. Each quantizer comparison uses the same mask within a placement. These names describe layer selection, not uniform scalar quantization. Average index precision is six bits for keys and two for values. With eight KV heads, dimension 128, and capacity 1024, the implementation allocates 28 MiB of indices and 0.875 MiB of FP16 scales, totaling 28.875 MiB. Both current and past KV are compressed, and restoration uses the existing 256-token tiles. This host-cache allocation excludes runtime I/O buffers, process memory, and accelerator scratch space.
 
@@ -153,7 +186,7 @@ The earlier uniform comparison retains its three sessions per configuration in t
 
 \section{Results and Analysis}
 \subsection{Comparison with Converged Lloyd--Max}
-LM100 is the inherited codebook generated with 100 Lloyd iterations; it is not a converged optimum. A stronger baseline runs four deterministic initializations until both centroid movement and relative MSE change satisfy strict convergence criteria for ten consecutive iterations. All four yield the same FP16 table. The minimum integrated Gaussian MSE falls from $1.3054680\!\times\!10^{-6}$ to $3.2175846\!\times\!10^{-7}$; Structured's nearest-centroid value is $4.7935449\!\times\!10^{-7}$. Hence Structured is not superior in scalar reconstruction error to converged LM.
+LM100 is the inherited codebook generated with 100 Lloyd iterations; it is not a converged optimum. A stronger baseline runs four deterministic initializations until both reconstruction-level movement and relative MSE change satisfy strict convergence criteria for ten consecutive iterations. All four yield the same FP16 table. The minimum integrated Gaussian MSE falls from $1.3054680\!\times\!10^{-6}$ to $3.2175846\!\times\!10^{-7}$; Structured's nearest-level MSE is $4.7935449\!\times\!10^{-7}$. Hence Structured is not superior in scalar reconstruction error to converged LM.
 
 
 
@@ -229,7 +262,7 @@ Decode (tokens/s) & $37.177\pm0.024$ & $37.112\pm0.057$\\
 In Table~\ref{tab:uniform}, Structured reduces held-out PPL by 11.28\% relative to Uniform. The measured throughput differences are small and ranges overlap, so the results do not demonstrate a meaningful end-to-end speed advantage for either variant. Structured improves NLL on three of four held-out documents, but one document accounts for approximately 79.65\% of the net NLL gain. This limited result must not be extrapolated to every document or domain.
 
 \subsection{Encoder Cost}
-The standalone Structured K8 encoder has 76 ONNX nodes, versus 837 in the inherited LM8 encoder; scalar indexing and centroid/scale reconstruction account for most of this difference. Node counts describe graph structure, not a proportional reduction in runtime. A more direct diagnostic uses a shared captured layer-0 input and 128-token encoder probes, summarized in Table~\ref{tab:encoder}. The converged LM codebook retains the same tree and centroid-selection structure as LM100, whereas Structured replaces them with arithmetic operations.
+The standalone Structured K8 encoder has 76 ONNX nodes, versus 837 in the inherited LM8 encoder; scalar indexing and level/scale reconstruction account for most of this difference. Node counts describe graph structure, not a proportional reduction in runtime. A more direct diagnostic uses a shared captured layer-0 input and 128-token encoder probes, summarized in Table~\ref{tab:encoder}. The converged LM codebook retains the same tree and reconstruction-level selection structure as LM100, whereas Structured replaces them with arithmetic operations.
 
 \begin{table}[t]
 \caption{AR128 encoder probe on the same captured input. Named-op cycle counters are not disjoint physical occupancy or elapsed time. Each result is a single instrumented probe.}
@@ -250,7 +283,7 @@ SDK execute ($\mu$s) & 3,187 & 1,523\\
 The observed decrease in index and scale-reconstruction work is consistent with the simplified representation. However, these named-op counters cannot be added as independent stage latencies, nor can the isolated execute times be substituted for full-model TTFT. Normalization, rotation, output casting, and runtime scheduling remain part of the complete path. The result supports the implementation mechanism rather than a hardware-independent complexity-to-speedup conversion.
 
 \subsection{Same-Codebook Decoder Ablation}
-To isolate restoration, Table~\ref{tab:decoder} compares the Structured LUT control and arithmetic decoder using identical codes, scales, and centroids for a 256-token probe. Their outputs are bit-exact against the FP16 reference. Arithmetic uses 39.56\% fewer physical HVX busy cycles, while SDK execute time changes much less. Busy work, overlapping vector-lane activity, and elapsed execution time are distinct quantities; 39.56\% is not a whole-model decoding speedup. Decoder validation additionally covers all byte codes, edge scales, and partial tiles at multiple token lengths.
+To isolate restoration, Table~\ref{tab:decoder} compares the Structured LUT control and arithmetic decoder using identical codes, scales, and reconstruction levels for a 256-token probe. Their outputs are bit-exact against the FP16 reference. Arithmetic uses 39.56\% fewer physical HVX busy cycles, while SDK execute time changes much less. Busy work, overlapping vector-lane activity, and elapsed execution time are distinct quantities; 39.56\% is not a whole-model decoding speedup. Decoder validation additionally covers all byte codes, edge scales, and partial tiles at multiple token lengths.
 
 \begin{table}[t]
 \caption{Same-codebook Structured decoder probe: one instrumented 256-token invocation per variant.}
@@ -312,6 +345,8 @@ Within this scope, Structured K8 provides a practical specialization of piecewis
 \bibitem{artifact} J. Han, ``ai-hub-models: TurboQuant KV-cache implementation and experiment records,'' 2026. Snapshot \texttt{b438a098c} (matched PPL follow-up); repeated timing commit \texttt{565acc7b1}; earlier experiment commits \texttt{70b8b006e}, \texttt{cdd68c447}, \texttt{8e35f0995}, and \texttt{dc629e6d6}. [Online]. Available: \url{https://github.com/HANJEONGWOO/ai-hub-models}
 \bibitem{pwlq} J. Fang, A. Shafiee, H. Abdel-Aziz, D. Thorsley, G. Georgiadis, and J. Hassoun, ``Post-training piecewise linear quantization for deep neural networks,'' arXiv:2002.00104, 2020.
 \bibitem{ptq4vit} Z. Yuan, C. Xue, Y. Chen, Q. Wu, and G. Sun, ``PTQ4ViT: Post-training quantization for vision transformers with twin uniform quantization,'' in \emph{Proc. ECCV}, 2022.
+\bibitem{attention} A. Vaswani \emph{et al.}, ``Attention is all you need,'' in \emph{Advances in Neural Information Processing Systems}, vol. 30, 2017.
+\bibitem{kvtuner} X. Li \emph{et al.}, ``KVTuner: Sensitivity-aware layer-wise mixed-precision KV cache quantization for efficient and nearly lossless LLM inference,'' in \emph{Proc. ICML}, PMLR, vol. 267, pp. 36451--36485, 2025.
 \bibitem{qwen3} A. Yang \emph{et al.}, ``Qwen3 technical report,'' arXiv:2505.09388, 2025.
 \bibitem{wikitext} S. Merity, C. Xiong, J. Bradbury, and R. Socher, ``Pointer sentinel mixture models,'' arXiv:1609.07843, 2016.
 \end{thebibliography}
