@@ -122,7 +122,7 @@ The logical floor rule rounds half-step ties upward. Execution uses a stored rec
  \end{cases}}
  \label{eq:byte}
 \end{equation}
-Codes are ordered from negative to positive reconstruction levels. The decoder recovers $j=b-128$ for $b\geq128$ and $j=127-b$ otherwise.
+For negative values, the magnitude index is reflected to preserve compatibility with the existing ascending LUT layout. The decoder recovers $j=b-128$ for $b\geq128$ and $j=127-b$ otherwise.
 
 \begin{figure}[t]
 \centering
