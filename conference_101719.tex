@@ -1,4 +1,4 @@
-% III-C: four boxed logical equations; Eq. (4) contrasts LM K4 and Structured K8.
+% III-B: four boxed logical equations; Eq. (2) contrasts LM K4 and Structured K8.
 % The symbol p denotes bit width; b is an 8-bit code, not a sign bit.
 % Reconstruction-level terminology and level notation are consistent throughout.
 % Existing FP16 rounding, byte mapping, tables and experimental values retained.
@@ -26,7 +26,6 @@
 \usepackage{flushend}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning}
-\newcommand{\fl}{\operatorname{fl}_{16}}
 \newcommand{\clip}{\operatorname{clip}}
 \hyphenation{quan-ti-za-tion de-quan-ti-za-tion code-book}
 
@@ -85,23 +84,7 @@ The three panels in Fig.~\ref{fig:overview} connect the storage budget to the de
 
 The center panel illustrates Boundary placement, with K8 assigned to the first and last seven of 28 layers. The drawing numbers layers from 1 to $L$; our experimental masks use zero-based indices. Odd placement is also evaluated under the same storage budget. These placements instantiate the precision allocation used to compare quantizer implementations.
 
-The right panel selects LM for K4/V2 and Structured quantization for K8. Its scalar axis $x$ represents a normalized, rotated coordinate, denoted $y$ below. The expression $c_{r,k}=a_r+k\Delta_r$ gives a positive reconstruction magnitude before sign restoration and the separate FP16 rounding of multiplication and addition. The following subsections specify the numerical representation, arithmetic indexing, and native HVX restoration.
-
-\subsection{Rotated, Norm-Corrected Cache Representation}
-For a nonzero key vector $x\in\mathbb{R}^{d}$, the inherited codec computes
-\begin{equation}
- n=\lVert x\rVert_2,\qquad y=R(x/n),
- \label{eq:rotation}
-\end{equation}
-where $R$ is a fixed orthogonal matrix and $d=128$. Dense QR-generated rotations use seeds 42 and 542 for keys and values, respectively; matrix generation occurs offline. The experiments retain norm correction and disable the quantized Johnson--Lindenstrauss (QJL) residual-correction stage. Thus, this implementation is not the full inner-product-unbiased TurboQuant construction~\cite{turboquant}.
-
-Let $\hat{\ell}$ denote the vector of signed reconstruction levels selected for $y$. Conceptually, the effective scale and restored rotated coordinates are
-\begin{equation}
- s_{\mathrm{eff}}=\fl\!\left(n/\lVert\hat{\ell}\rVert_2\right),
- \qquad \hat z_i=\fl(s_{\mathrm{eff}}\hat{\ell}_i).
- \label{eq:scale}
-\end{equation}
-Here $\fl$ denotes rounding to IEEE half precision. The implementation retains its existing guards and FP16 operation boundaries; zero vectors restore to zero through a zero scale. The surrounding attention rotation and layout policy is unchanged. The new native decoder produces scale-corrected rotated coordinates, rather than introducing a new attention algorithm.
+The right panel selects LM for K4/V2 and Structured quantization for K8. Its scalar axis $x$ represents a normalized, rotated coordinate, denoted $y$ below. The expression $c_{r,k}=a_r+k\Delta_r$ gives a positive reconstruction magnitude before sign restoration and the separate FP16 rounding of multiplication and addition. The following subsections specify arithmetic indexing and native HVX restoration.
 
 \subsection{Quantization Levels and Arithmetic Indexing}
 The proposed key cache retains Lloyd--Max quantization for K4 and uses Structured quantization for K8. Let $p$ denote the bit width and $\mathcal{L}_4^+$ the eight positive reconstruction levels of the symmetric, 16-level LM4 codebook. Before sign restoration, the level rule is
@@ -161,12 +144,12 @@ The symbol $b$ denotes the \emph{complete eight-bit code}, not a sign bit. Its m
 \end{figure}
 
 \subsection{HVX Decoder and Storage Budget}
-Figure~\ref{fig:path} details the Structured K8 encoding and restoration path within the overview. The encoder is lowered to QNN HTP graph operations. The native HVX decoder extracts the magnitude code, selects a region's coefficients, reconstructs the level with separate FP16 multiply/add instructions, restores its sign, and multiplies by the effective scale. A 128-byte input load produces two 128-byte FP16 output vectors. The implementation avoids level-table loads and per-coordinate scalar loops. The coefficient payload is eight bytes, versus 512 bytes for an explicit 256-entry FP16 codebook; this is a codebook-storage comparison, not a measured total-memory reduction. Fusing the multiply and add would change the prescribed rounding and is not used.
+Figure~\ref{fig:path} details the Structured K8 encoding and restoration path within the overview. The encoder is lowered to QNN HTP graph operations. The native HVX decoder extracts the magnitude code, selects a region's coefficients, reconstructs the level with separate FP16 multiply/add instructions, restores its sign, and multiplies by the effective FP16 scale used for norm correction. A 128-byte input load produces two 128-byte FP16 output vectors. The implementation avoids level-table loads and per-coordinate scalar loops. The coefficient payload is eight bytes, versus 512 bytes for an explicit 256-entry FP16 codebook; this is a codebook-storage comparison, not a measured total-memory reduction. Fusing the multiply and add would change the prescribed rounding and is not used.
 
 Both tested placements assign K8 to 14 of Qwen3-1.7B's 28 layers, LM K4 to the other 14, and LM V2 throughout. \emph{Odd placement} uses zero-based layers $1,3,\ldots,27$; \emph{Boundary placement} uses layers $0$--$6$ and $21$--$27$. Each quantizer comparison uses the same mask within a placement. These names describe layer selection, not uniform scalar quantization. Average index precision is six bits for keys and two for values. With eight KV heads, dimension 128, and capacity 1024, the implementation allocates 28 MiB of indices and 0.875 MiB of FP16 scales, totaling 28.875 MiB. Both current and past KV are compressed, and restoration uses the existing 256-token tiles. This host-cache allocation excludes runtime I/O buffers, process memory, and accelerator scratch space.
 
 \section{Experimental Methodology}
-We use Qwen3-1.7B~\cite{qwen3} in a fixed W4A16 configuration on a Galaxy S26 Ultra (SM8850), using QAIRT 2.48.0.260626 and the HTP backend in burst mode. Inference uses a single sequence with context capacity 1024. Model weights, activation encodings, rotation seeds, norm correction, and K4/V2 paths are held fixed within each quantizer comparison; no weight training or activation recalibration is performed. The implementation and recorded experiments are identified by immutable commits~\cite{artifact}. Table~\ref{tab:lm-repeated} summarizes the repeated performance comparison.
+We use Qwen3-1.7B~\cite{qwen3} in a fixed W4A16 configuration on a Galaxy S26 Ultra (SM8850), using QAIRT 2.48.0.260626 and the HTP backend in burst mode. Inference uses a single sequence with context capacity 1024. Dense QR-generated rotations use seeds 42 and 542 for keys and values, respectively, with norm correction enabled. The quantized Johnson--Lindenstrauss (QJL) residual stage is disabled, so the evaluated codec is not the full inner-product-unbiased TurboQuant construction~\cite{turboquant}. Model weights, activation encodings, rotation seeds, norm correction, and K4/V2 paths are held fixed within each quantizer comparison; no weight training or activation recalibration is performed. The implementation and recorded experiments are identified by immutable commits~\cite{artifact}. Table~\ref{tab:lm-repeated} summarizes the repeated performance comparison.
 
 \begin{table*}[t]
 \caption{Repeated on-device performance with matched layer masks. Values are mean $\pm$ sample SD across ten measured sessions per configuration, excluding warm-up. Improvements denote lower TTFT or higher throughput relative to converged LM8, computed from group means. Every configuration allocates 28.875 MiB of host KV storage.}
