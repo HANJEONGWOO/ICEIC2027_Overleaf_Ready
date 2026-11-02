@@ -84,10 +84,10 @@ The three panels in Fig.~\ref{fig:overview} connect the storage budget to the de
 
 The center panel illustrates Boundary placement, with K8 assigned to the first and last seven of 28 layers. The drawing numbers layers from 1 to $L$; our experimental masks use zero-based indices. Odd placement is also evaluated under the same storage budget. These placements instantiate the precision allocation used to compare quantizer implementations.
 
-The right panel selects LM for K4/V2 and Structured quantization for K8. Its scalar axis $x$ represents a normalized, rotated coordinate, denoted $y$ below. The expression $c_{r,k}=a_r+k\Delta_r$ gives a positive reconstruction magnitude before sign restoration and the separate FP16 rounding of multiplication and addition. The following subsections specify arithmetic indexing and native HVX restoration.
+The right panel selects LM for K4/V2 and Structured quantization for K8. Its scalar axis $x$ represents a normalized, rotated coordinate, denoted $y$ below, and $c_{r,k}$ denotes a positive reconstruction level. The following subsections specify arithmetic indexing and native HVX restoration.
 
 \subsection{Quantization Levels and Arithmetic Indexing}
-The proposed key cache retains Lloyd--Max quantization for K4 and uses Structured quantization for K8. Let $p$ denote the bit width and $\mathcal{L}_4^+$ the eight positive reconstruction levels of the symmetric, 16-level LM4 codebook. Before sign restoration, the level rule is
+The proposed key cache uses LM K4 and Structured K8. For bit width $p$, the positive reconstruction levels are
 \begin{equation}
  \boxed{\ell_p^+(j)=\begin{cases}
   \mathcal{L}_4^+[j],&p=4,\\
@@ -95,11 +95,11 @@ The proposed key cache retains Lloyd--Max quantization for K4 and uses Structure
  \end{cases}}
  \label{eq:level}
 \end{equation}
-For K4, $j\in\{0,\ldots,7\}$ selects a frozen LM level; the existing threshold-based encoder is unchanged. For K8, $j=64r+k$, where $r\in\{0,1\}$ selects a region and $k\in\{0,\ldots,63\}$ selects its local level. Here $a_r$ is the region's first level and $\Delta_r$ its spacing. Negative levels follow by sign reflection. The K8 expression describes the grid before rounding; deployed multiplication and addition are separately rounded to FP16. This rule describes the proposed key cache, not the separate LM8 or Uniform K8 comparison configurations; values remain LM V2.
+For K4, $\mathcal{L}_4^+$ contains eight positive LM levels indexed by $j\in\{0,\ldots,7\}$; the threshold-based encoder is retained. For K8, $j=64r+k$, with region $r\in\{0,1\}$, local index $k\in\{0,\ldots,63\}$, offset $a_r$, and spacing $\Delta_r$. Negative levels follow by sign reflection. The K8 expression describes the grid before rounding; its multiplication and addition are separately rounded to FP16.
 
-The four Structured coefficients are fitted offline by analytically integrated scalar MSE under $\mathcal{N}(0,1/128)$, using nine fixed initializations and ordering/positive-spacing constraints, without KV samples or PPL-based tuning. This is a design approximation, not a claim of exact empirical fit or global optimality. The frozen offsets are $a_0=0.00089263916015625$ and $a_1=0.1268310546875$; the spacings are $\Delta_0=0.001956939697265625$ and $\Delta_1=0.00376129150390625$.
+The four coefficients are fitted offline to minimize scalar MSE under the Gaussian approximation $\mathcal{N}(0,1/d)$, without KV samples or PPL-based tuning. The frozen coefficients and fitting procedure are provided in the implementation~\cite{artifact}.
 
-\emph{K8 region selection.} For one rotated coordinate $y$, let $m=|y|$. The boundary $\tau$ is the midpoint between the deployed, FP16-rounded levels at $(r,k)=(0,63)$ and $(1,0)$:
+\emph{Arithmetic indexing.} For a normalized, rotated coordinate $y$, let $m=|y|$. The boundary $\tau$ is the midpoint between the FP16-rounded levels at $(r,k)=(0,63)$ and $(1,0)$. Select the region as
 \begin{equation}
  \boxed{r=\begin{cases}
   0,&m\leq\tau,\\
@@ -107,14 +107,14 @@ The four Structured coefficients are fitted offline by analytically integrated s
  \end{cases}}
  \label{eq:region}
 \end{equation}
-\emph{K8 local index.} Subtract the region offset, divide by its spacing, round, and clip:
+The local index is
 \begin{equation}
  \boxed{k=\clip\!\left(\left\lfloor(m-a_r)\dfrac{1}{\Delta_r}+0.5\right\rfloor,0,63\right)}
  \label{eq:index}
 \end{equation}
-Here $\clip(\cdot,0,63)$ limits the index to 0--63. Execution retains the stored reciprocal and intermediate FP16 rounding. In this logical rule, half-step ties round upward, unlike LM's lower-index convention; it is not a cross-precision bit-exactness claim.
+The logical floor rule rounds half-step ties upward. Execution uses a stored reciprocal with intermediate FP16 rounding, which can shift decisions near index boundaries.
 
-\emph{K8 stored byte and sign.} The magnitude index $j=64r+k$ spans 0--127. Its stored code is
+\emph{Byte encoding.} The magnitude index $j$ and the sign of $y$ are stored in one UINT8 code:
 \begin{equation}
  \boxed{b=\begin{cases}
   128+j,&y\geq0,\\
@@ -122,7 +122,7 @@ Here $\clip(\cdot,0,63)$ limits the index to 0--63. Execution retains the stored
  \end{cases}}
  \label{eq:byte}
 \end{equation}
-The symbol $b$ denotes the \emph{complete eight-bit code}, not a sign bit. Its most significant bit is 1 for nonnegative inputs (codes 128--255) and 0 for negative inputs (codes 0--127). The lower seven bits contain $j$ or its reflection $127-j$, respectively, ordering codes from the most negative to the most positive level. For example, $j=5$ gives $b=133$ (\texttt{10000101}) for $y\geq0$ and $b=122$ (\texttt{01111010}) for $y<0$. The decoder recovers $j$ as $b-128$ or $127-b$, then obtains the region and local index. K8 uses one UINT8 per coordinate, without an additional sign bit or sub-byte packing; K4/V2 retain their existing packing.
+Codes are ordered from negative to positive reconstruction levels. The decoder recovers $j=b-128$ for $b\geq128$ and $j=127-b$ otherwise.
 
 \begin{figure}[t]
 \centering
