@@ -23,7 +23,7 @@
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{url}
-\usepackage{flushend}
+\usepackage[checkfloat]{flushend}
 \newcommand{\clip}{\operatorname{clip}}
 \hyphenation{quan-ti-za-tion de-quan-ti-za-tion code-book}
 
@@ -242,13 +242,11 @@ Execute excluding wait ($\mu$s) & 769 & 653\\
 \end{table}
 
 \section{Limitations and Conclusion}
-The repeated LM comparison covers one model, one device, one prompt, context capacity 1024, and two masks in one measurement campaign. Ten warmed runs per configuration characterize within-experiment variability, not variation across devices, days, or workloads. The quality follow-up adds a matched Boundary PPL comparison, but uses only four previously evaluated reference windows, scored once each. It introduces neither an independent held-out test nor a statistical-significance claim; the earlier held-out evidence remains limited to small document subsets. The earlier three-run uniform comparison and single-session codec probes retain their own sampling limitations.
+The timing evaluation covers one model, device, and prompt at a context capacity of 1024 in a single measurement campaign. Quality evidence includes four reused reference windows and small held-out subsets, limiting generalization. Direct HTP throttling measurements were unavailable, and temperature/order effects remain unadjusted. Energy and sustained thermal performance were not evaluated. Reported storage covers host KV allocations and excludes separate runtime buffers.
 
-Recorded current AP temperatures range from 26.0 to 44.4 degrees Celsius, with Android thermal status and reported sensor severity zero throughout. These observations do not prove the absence of HTP throttling: no direct HTP clock/throttle counter was available. Temperature/order associations remain despite counterbalancing, and no adjustment or sample filtering is applied. We claim no energy, sustained thermal-performance, long-context task, or total accelerator-memory result. The 28.875 MiB figure is allocated host KV storage; separate runtime I/O buffers occupy approximately 96.929 MiB.
+Numerical checks exceeded the 0.2\% tolerance for the AR128 encoder scale in the earlier LM baseline (100 Lloyd iterations) and for a standalone V4 probe. The full-model comparisons use converged LM8 and V2; their results and decoder bit-exactness do not resolve these failures.
 
-Numerical validation also has limits. The AR128 encoder scale check for the inherited LM baseline (100 Lloyd iterations) and a standalone V4 probe exceed the unchanged 0.2\% tolerance. The V4 probe is not the full-model V2 path. Graph/hash audits and repeated timings do not re-certify these numerical tolerances, and the failures are not waived by decoder bit-exactness or acceptable PPL.
-
-Within this scope, Structured K8 provides a practical specialization of piecewise-uniform quantization for mobile KV caching. Arithmetic indexing and HVX restoration preserve a compact cache while reducing mean TTFT by 32.62\%/31.12\% and increasing mean decode throughput by 13.61\%/14.41\% under Odd/Boundary placement. On the four reused reference windows, Structured's PPL is 1.8060\% higher than converged LM under Odd placement and 0.4504\% lower under Boundary placement. Quality ordering is therefore placement-dependent within this evaluation, while the speed advantage is observed under both tested masks. The historical held-out and uniform comparisons remain separate, limited evidence. Future work should prioritize V2 packing, layout conversion, past-KV restoration, and evaluation across models, contexts, workloads, and independent measurement campaigns.
+Structured K8 uses two-region reconstruction levels to simplify arithmetic indexing and HVX restoration for mobile KV caching. Under Odd and Boundary placement, it reduces mean TTFT by approximately 31--33\% and increases mean decode throughput by about 14\% relative to converged LM8. PPL ordering depends on placement within the evaluated reference windows. Future work should extend evaluation to larger independent datasets, additional models and devices, and longer-context workloads.
 
 \begin{thebibliography}{00}
 \bibitem{kivi} Z. Liu \emph{et al.}, ``KIVI: A tuning-free asymmetric 2bit quantization for KV cache,'' arXiv:2402.02750, 2024.
