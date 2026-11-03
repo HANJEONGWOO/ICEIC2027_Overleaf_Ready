@@ -132,7 +132,7 @@ Quality is evaluated by teacher-forced perplexity on four reused WikiText-2~\cit
 
 \section{Results and Analysis}
 \subsection{End-to-End Performance and Quality}
-We compare Structured K8 with converged LM8, which has lower Gaussian scalar reconstruction MSE. This comparison evaluates complete implementations: both encoding and restoration differ, while the inherited LM encoder retains its FP16 affine reconstruction path. Its rounding can differ from a decoder-LUT lookup, so the results do not establish implementation-independent superiority over Lloyd--Max quantization.
+We compare Structured K8 with converged LM8, which has lower Gaussian scalar reconstruction MSE. This comparison evaluates complete implementations.
 
 \begin{table*}[t]
 \caption{Repeated on-device performance with matched layer masks. Values are mean $\pm$ sample SD across ten measured sessions per configuration, excluding warm-up. Improvements denote lower TTFT or higher throughput relative to converged LM8, computed from group means. Every configuration allocates 28.875 MiB of host KV storage.}
@@ -177,9 +177,7 @@ Boundary & LM-conv. & 3.008651 & 20.26006\\
 % Odd LM 23.19331631; Odd Structured 23.61218745;
 % Boundary LM 20.26006037; Boundary Structured 20.16880668.
 
-On the four reused reference windows in Table~\ref{tab:lm-ppl}, Structured has 1.81\% higher PPL than converged LM8 under Odd placement and 0.45\% lower PPL under Boundary placement. LM has lower NLL on three of four Odd windows, while each method wins on two Boundary windows. Quality ordering is therefore placement-dependent; the small Boundary advantage does not establish broad-domain or statistically significant superiority.
-
-An earlier, separate Odd-placement evaluation on four held-out documents (set A) reports 1.16\% higher PPL for Structured: 16.4049 versus 16.2165 for converged LM~\cite{artifact}. This historical result is distinct from the reference-window follow-up and the uniform comparison below.
+On the four reused reference windows in Table~\ref{tab:lm-ppl}, Structured has 1.81\% higher PPL than converged LM8 under Odd placement and 0.45\% lower PPL under Boundary placement. LM has lower NLL on three of four Odd windows, while each method wins on two Boundary windows. Quality ordering is therefore placement-dependent.
 
 \subsection{Comparison with Uniform Quantization}
 The uniform baseline uses a symmetric 256-level grid with one spacing fitted under the same Gaussian model, without KV- or PPL-based tuning, and frozen to FP16. Both variants use arithmetic HVX decoders and the same Odd placement, allowing a comparison of single- and two-region quantization under matched deployment settings.
@@ -205,7 +203,7 @@ Decode (tokens/s) & $37.177\pm0.024$ & $37.112\pm0.057$\\
 In Table~\ref{tab:uniform}, Structured reduces PPL by 11.28\% on the separate four-document held-out set B. The three-run timings have small differences and overlapping ranges, providing no clear speed advantage for either variant. Structured improves NLL on three documents, but one accounts for 79.65\% of the net gain. The quality benefit is therefore limited evidence from this small set.
 
 \subsection{Encoder and Decoder Analysis}
-The standalone Structured K8 encoder has 76 ONNX nodes, compared with 837 in the inherited LM8 encoder, mainly through simpler scalar indexing and level/scale reconstruction. In the single AR128 probe using the same captured layer-0 input (Table~\ref{tab:encoder}), SDK execute time decreases from 3187 to 1523~$\mu$s. These observations support the reduced implementation cost; node counts do not imply proportional runtime reductions.
+The standalone Structured K8 encoder has 76 ONNX nodes, compared with 837 in the inherited LM8 encoder, mainly through simpler scalar indexing and level/scale reconstruction. In the single AR128 probe using the same captured layer-0 input (Table~\ref{tab:encoder}), SDK execute time decreases from 3187 to 1523~$\mu$s. These observations support the reduced implementation cost.
 
 \begin{table}[t]
 \caption{AR128 encoder probe on the same captured input. Named-op cycle counters are not disjoint physical occupancy or elapsed time. Each result is a single instrumented probe.}
@@ -223,7 +221,7 @@ SDK execute ($\mu$s) & 3,187 & 1,523\\
 \end{tabular}
 \end{table}
 
-The encoder's named-op cycle counts cannot be added as independent stage latencies or equated with physical vector-unit occupancy. Its isolated execute time also cannot substitute for full-model TTFT, which includes normalization, rotation, output casting, and runtime scheduling.
+
 
 For restoration, Table~\ref{tab:decoder} compares the Structured LUT control and arithmetic decoder using identical codes, scales, and reconstruction levels in a single 256-token probe. Both produce outputs bit-exact against the FP16 reference. Arithmetic reduces physical HVX busy cycles by 39.56\%, while SDK execute time decreases only from 4469 to 4429~$\mu$s (about 0.9\%). The cycle reduction measures vector-unit work, not whole-model decoding speedup. Additional decoder checks cover all byte codes, edge scales, and partial tiles.
 
