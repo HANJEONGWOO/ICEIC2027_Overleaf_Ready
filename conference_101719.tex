@@ -15,9 +15,10 @@
 % Bibliography entries are embedded in this file.
 % Results are transcribed from the author's committed experiment reports;
 % this drafting process did not rerun the device experiments.
-% AUTHOR CHECK: confirm author order, official affiliations, email, funding,
-% publication clearance, original logs, and all experimental descriptions.
+% AUTHOR CHECK: confirm funding, publication clearance, original logs,
+% and all experimental descriptions.
 \documentclass[conference,a4paper,10pt]{IEEEtran}
+\IEEEoverridecommandlockouts
 \usepackage{cite}
 \usepackage{amsmath,amssymb}
 \usepackage{graphicx}
@@ -30,10 +31,19 @@
 
 \begin{document}
 \title{Structured KV Cache Quantization for Mobile NPUs}
-% Replace this block after confirming ALL authors and the official affiliation.
-% Add an approved funding acknowledgement only when its exact text is known.
+% Author order and affiliations supplied by the authors.
 \author{\IEEEauthorblockN{Jeongwoo Han}
-\IEEEauthorblockA{\textit{Working draft: author list, affiliations, and contact information to be confirmed}}}
+\IEEEauthorblockA{Department of Digital Media\\
+and Communications Engineering\\
+Sungkyunkwan University\\
+jwhot.han@skku.edu}
+\and
+\IEEEauthorblockN{Dongkun Shin\IEEEauthorrefmark{1}}
+\IEEEauthorblockA{Department of Electrical\\
+and Computer Engineering\\
+Sungkyunkwan University\\
+dongkun@skku.edu}
+\thanks{\IEEEauthorrefmark{1}Corresponding author: Dongkun Shin.}}
 \maketitle
 
 \begin{abstract}
@@ -122,9 +132,6 @@ The logical floor rule rounds half-step ties upward. Execution uses a stored rec
 \end{equation}
 For negative values, the magnitude index is reflected to preserve compatibility with the existing ascending LUT layout. The decoder recovers $j=b-128$ for $b\geq128$ and $j=127-b$ otherwise.
 
-\subsection{HVX Arithmetic Decoder}
-The native HVX decoder recovers $r$ and $k$ from each stored byte and reconstructs $a_r+k\Delta_r$ using separate FP16 multiply and add operations. It then applies the sign and the effective FP16 scale used for norm correction, producing FP16 tiles for the existing attention path. Vectorized restoration avoids level-table loads and per-coordinate scalar loops. The coefficient payload is four FP16 values (8 bytes), replacing a 256-entry FP16 codebook (512 bytes).
-
 % Queue the double-column results table early so it appears near its
 % discussion without delaying the following single-column tables.
 \begin{table*}[t]
@@ -146,6 +153,9 @@ Boundary & TTFT (ms) & $726.580\pm13.099$ & $500.487\pm9.512$ & 31.12\\
 \bottomrule
 \end{tabular}
 \end{table*}
+
+\subsection{HVX Arithmetic Decoder}
+The native HVX decoder recovers $r$ and $k$ from each stored byte and reconstructs $a_r+k\Delta_r$ using separate FP16 multiply and add operations. It then applies the sign and the effective FP16 scale used for norm correction, producing FP16 tiles for the existing attention path. Vectorized restoration avoids level-table loads and per-coordinate scalar loops. The coefficient payload is four FP16 values (8 bytes), replacing a 256-entry FP16 codebook (512 bytes).
 
 \section{Experimental Methodology}
 Experiments use Qwen3-1.7B~\cite{qwen3} (W4A16) on a Galaxy S26 Ultra (SM8850), with QAIRT 2.48.0.260626 and the HTP backend in burst mode. Inference uses a single sequence and context capacity of 1024. Structured K8 and converged LM8 are compared under matched masks in Odd and Boundary placement. Weights, activation encodings, rotations, norm correction, and K4/V2 paths remain fixed. The quantized Johnson--Lindenstrauss (QJL) residual stage is disabled, so the evaluated codec is not the full TurboQuant construction~\cite{turboquant}. Implementation details and frozen artifacts are provided in the accompanying repository~\cite{artifact}.
