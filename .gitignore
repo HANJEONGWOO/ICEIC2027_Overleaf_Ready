@@ -1,5 +1,6 @@
 .localleaf/
 *.localleaf-*
+.latexmk.lock
 *.aux
 *.log
 *.out
