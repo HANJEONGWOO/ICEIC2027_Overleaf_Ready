@@ -23,6 +23,7 @@
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{url}
+\usepackage{placeins}
 \usepackage[checkfloat]{flushend}
 \newcommand{\clip}{\operatorname{clip}}
 \hyphenation{quan-ti-za-tion de-quan-ti-za-tion code-book}
@@ -205,7 +206,7 @@ In Table~\ref{tab:uniform}, Structured reduces PPL by 11.28\% on the separate fo
 \subsection{Encoder and Decoder Analysis}
 The standalone Structured K8 encoder has 76 ONNX nodes, compared with 837 in the inherited LM8 encoder, mainly through simpler scalar indexing and level/scale reconstruction. In the single AR128 probe using the same captured layer-0 input (Table~\ref{tab:encoder}), SDK execute time decreases from 3187 to 1523~$\mu$s. These observations support the reduced implementation cost.
 
-\begin{table}[t]
+\begin{table}[!t]
 \caption{AR128 encoder probe on the same captured input. Named-op cycle counters are not disjoint physical occupancy or elapsed time. Each result is a single instrumented probe.}
 \label{tab:encoder}
 \centering
@@ -225,7 +226,7 @@ SDK execute ($\mu$s) & 3,187 & 1,523\\
 
 For restoration, Table~\ref{tab:decoder} compares the Structured LUT control and arithmetic decoder using identical codes, scales, and reconstruction levels in a single 256-token probe. Both produce outputs bit-exact against the FP16 reference. Arithmetic reduces physical HVX busy cycles by 39.56\%, while SDK execute time decreases only from 4469 to 4429~$\mu$s (about 0.9\%). The cycle reduction measures vector-unit work, not whole-model decoding speedup. Additional decoder checks cover all byte codes, edge scales, and partial tiles.
 
-\begin{table}[t]
+\begin{table}[!t]
 \caption{Same-codebook Structured decoder probe: one instrumented 256-token invocation per variant.}
 \label{tab:decoder}
 \centering
@@ -241,6 +242,7 @@ Execute excluding wait ($\mu$s) & 769 & 653\\
 \end{tabular}
 \end{table}
 
+\FloatBarrier
 \section{Conclusion}
 
 Structured K8 uses two-region reconstruction levels to simplify arithmetic indexing and HVX restoration for mobile KV caching. Under Odd and Boundary placement, it reduces mean TTFT by approximately 31--33\% and increases mean decode throughput by about 14\% relative to converged LM8. PPL ordering depends on placement within the evaluated reference windows. Future work should extend evaluation to larger independent datasets, additional models and devices, and longer-context workloads.
