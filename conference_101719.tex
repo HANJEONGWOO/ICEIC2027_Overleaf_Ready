@@ -58,7 +58,7 @@ KV cache, quantization, mobile NPU, piecewise-uniform quantization, Hexagon HVX
 \section{Introduction}
 Key--value (KV) cache quantization reduces storage and data movement, but encoding and decoding overhead can limit its benefits for mobile inference. KIVI motivates asymmetric key/value quantization~\cite{kivi}, while TurboQuant explores rotation-based scalar quantization~\cite{turboquant}. Practical deployment therefore requires evaluating codec costs alongside quantization error.
 
-Our work builds on a TurboQuant implementation in the Qualcomm AI Hub Models pipeline~\cite{artifact}. Its inherited Lloyd--Max encoder uses comparison trees and reconstruction-level selection subgraphs, while LUT-based decoding requires table lookup and layout conversion. We investigate whether structured reconstruction levels can simplify both paths while maintaining useful language-model quality.
+Our work builds on a TurboQuant implementation in the Qualcomm AI Hub Models pipeline. Its inherited Lloyd--Max encoder uses comparison trees and reconstruction-level selection subgraphs, while LUT-based decoding requires table lookup and layout conversion. We investigate whether structured reconstruction levels can simplify both paths while maintaining useful language-model quality.
 
 Building on piecewise quantization approaches such as PWLQ~\cite{pwlq} and PTQ4ViT~\cite{ptq4vit}, we present Structured K8, a two-region piecewise-uniform key quantizer with arithmetic indexing and HVX decoding. Our contribution is its hardware-oriented implementation for a rotated KV cache, preserving the existing byte format and explicit FP16 rounding, together with controlled on-device comparisons against Lloyd--Max K8 and a single-spacing uniform baseline. Mixed key/value precision and layer placement support this implementation. Figure~\ref{fig:overview} summarizes the overall design.
 
@@ -83,7 +83,7 @@ where $Q$, $K$, and $V$ are queries, keys, and values, and $d$ is the key dimens
 KV quantization sensitivity varies across layers~\cite{kvtuner}, motivating higher precision in selected layers under a fixed cache budget. We mix K8 and K4 to maintain average K6 precision, with V2 throughout. Odd and Boundary are tested placements, not presumed optima; comparisons use matched masks.
 
 \subsection{Packing and Scalar-Index Costs}
-Two- and four-bit codes divide a byte evenly, whereas eight-bit codes use direct byte storage. Three-, five-, six-, and seven-bit codes may cross byte boundaries and need fragment assembly. Separately, the inherited Lloyd--Max encoder incurs bit-width-dependent comparison-tree and reconstruction-level selection costs~\cite{artifact}. Structured K8 uses byte storage and arithmetic indexing and decoding; K4/V2 retain packing overhead. Thus, nominal bit width alone does not determine execution cost.
+Two- and four-bit codes divide a byte evenly, whereas eight-bit codes use direct byte storage. Three-, five-, six-, and seven-bit codes may cross byte boundaries and need fragment assembly. Separately, the inherited Lloyd--Max encoder incurs bit-width-dependent comparison-tree and reconstruction-level selection costs. Structured K8 uses byte storage and arithmetic indexing and decoding; K4/V2 retain packing overhead. Thus, nominal bit width alone does not determine execution cost.
 
 \section{Structured Quantization and Implementation}
 \label{sec:method}
@@ -105,7 +105,7 @@ The proposed key cache uses Lloyd--Max K4 and Structured K8. For bit width $p$, 
 \end{equation}
 For K4, $\mathcal{L}_4^+$ contains eight positive Lloyd--Max levels indexed by $j\in\{0,\ldots,7\}$; the threshold-based encoder is retained. For K8, $j=64r+k$, with region $r\in\{0,1\}$, local index $k\in\{0,\ldots,63\}$, offset $a_r$, and spacing $\Delta_r$. Negative levels follow by sign reflection. The K8 expression describes the grid before rounding; its multiplication and addition are separately rounded to FP16.
 
-The four coefficients are fitted offline to minimize scalar MSE under the Gaussian approximation $\mathcal{N}(0,1/d)$, without KV samples or PPL-based tuning. The frozen coefficients and fitting procedure are provided in the implementation~\cite{artifact}.
+The four coefficients are fitted offline to minimize scalar MSE under the Gaussian approximation $\mathcal{N}(0,1/d)$, without KV samples or PPL-based tuning.
 
 \emph{Arithmetic indexing.} For a normalized, rotated coordinate $y$, let $m=|y|$. The boundary $\tau$ is the midpoint between the FP16-rounded levels at $(r,k)=(0,63)$ and $(1,0)$. Select the region as
 \begin{equation}
@@ -158,7 +158,7 @@ Boundary & TTFT (ms) & $726.580\pm13.099$ & $500.487\pm9.512$ & 31.12\\
 The native HVX decoder recovers $r$ and $k$ from each stored byte and reconstructs $a_r+k\Delta_r$ using separate FP16 multiply and add operations. It then applies the sign and the effective FP16 scale used for norm correction, producing FP16 tiles for the existing attention path. Vectorized decoding avoids level-table loads and per-coordinate scalar loops. The coefficient payload is four FP16 values (8 bytes), replacing a 256-entry FP16 codebook (512 bytes).
 
 \section{Experimental Methodology}
-Experiments use Qwen3-1.7B~\cite{qwen3} (W4A16) on a Galaxy S26 Ultra (SM8850), with QAIRT 2.48.0.260626 and the HTP backend in burst mode. Inference uses a single sequence and context capacity of 1024. Structured K8 and Lloyd--Max K8 are compared under matched masks in Odd and Boundary placement. Weights, activation encodings, rotations, norm correction, and K4/V2 paths remain fixed. The quantized Johnson--Lindenstrauss (QJL) residual stage is disabled, so the evaluated codec is not the full TurboQuant construction~\cite{turboquant}. Implementation details and frozen artifacts are provided in the accompanying repository~\cite{artifact}.
+Experiments use Qwen3-1.7B~\cite{qwen3} (W4A16) on a Galaxy S26 Ultra (SM8850), with QAIRT 2.48.0.260626 and the HTP backend in burst mode. Inference uses a single sequence and context capacity of 1024. Structured K8 and Lloyd--Max K8 are compared under matched masks in Odd and Boundary placement. Weights, activation encodings, rotations, norm correction, and K4/V2 paths remain fixed. The quantized Johnson--Lindenstrauss (QJL) residual stage is disabled, so the evaluated codec is not the full TurboQuant construction~\cite{turboquant}.
 
 Performance uses 897 prompt tokens and 128 generated tokens. Each invocation includes a full warm-up, a cache reset, and a measured session. TTFT excludes model loading; decode throughput is 127 divided by the total duration of the post-prefill autoregressive steps. Each configuration has ten measured sessions in counterbalanced order, with a ten-second pause between invocations. We report means and sample standard deviations, with improvements computed from group means. End-to-end timing excludes detailed profiling.
 
@@ -263,7 +263,6 @@ Structured K8 uses two-region reconstruction levels to simplify arithmetic index
 \begin{thebibliography}{00}
 \bibitem{kivi} Z. Liu \emph{et al.}, ``KIVI: A tuning-free asymmetric 2bit quantization for KV cache,'' arXiv:2402.02750, 2024.
 \bibitem{turboquant} A. Zandieh, M. Daliri, M. Hadian, and V. Mirrokni, ``TurboQuant: Online vector quantization with near-optimal distortion rate,'' arXiv:2504.19874, 2025.
-\bibitem{artifact} J. Han, ``ai-hub-models: TurboQuant KV-cache implementation and experiment records,'' 2026. Snapshot \texttt{b438a098c} (matched PPL follow-up); repeated timing commit \texttt{565acc7b1}; earlier experiment commits \texttt{70b8b006e}, \texttt{cdd68c447}, \texttt{8e35f0995}, and \texttt{dc629e6d6}. [Online]. Available: \url{https://github.com/HANJEONGWOO/ai-hub-models}
 \bibitem{pwlq} J. Fang, A. Shafiee, H. Abdel-Aziz, D. Thorsley, G. Georgiadis, and J. Hassoun, ``Post-training piecewise linear quantization for deep neural networks,'' arXiv:2002.00104, 2020.
 \bibitem{ptq4vit} Z. Yuan, C. Xue, Y. Chen, Q. Wu, and G. Sun, ``PTQ4ViT: Post-training quantization for vision transformers with twin uniform quantization,'' in \emph{Proc. ECCV}, 2022.
 \bibitem{attention} A. Vaswani \emph{et al.}, ``Attention is all you need,'' in \emph{Advances in Neural Information Processing Systems}, vol. 30, 2017.
