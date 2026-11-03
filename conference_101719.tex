@@ -1,7 +1,7 @@
 % III-B: four boxed logical equations; Eq. (2) contrasts LM K4 and Structured K8.
 % The symbol p denotes bit width; b is an 8-bit code, not a sign bit.
 % Reconstruction-level terminology and level notation are consistent throughout.
-% Existing FP16 rounding, byte mapping, tables and experimental values retained.
+% Existing FP16 rounding and byte mapping retained; retained table values are unchanged.
 % ICEIC 2027 -- English working draft v7: supplied overview and design explanation, 2026-11-02.
 % Based on conference_101719_background_short_en.tex (v5).
 % Source branch: exp/structured-k8-lm8-repeat.
@@ -131,8 +131,8 @@ Performance uses 897 prompt tokens and 128 generated tokens. Each invocation inc
 Quality is evaluated by teacher-forced perplexity on four reused WikiText-2~\cite{wikitext} reference windows of 1024 tokens, using the unchanged performance binaries. Each window is scored once per configuration, totaling 4092 target tokens per configuration. Aggregate perplexity is the exponential of the token-averaged negative log-likelihood (NLL) across all four windows. These windows are neither an independent held-out test nor a full-corpus evaluation. Earlier LM and uniform held-out results use different document sets and are reported separately; their absolute PPL values are not directly comparable across sets. No matched Boundary held-out comparison is available. The three-run uniform timings and other supporting experiments are not pooled with the repeated LM measurements.
 
 \section{Results and Analysis}
-\subsection{Comparison with Converged Lloyd--Max}
-LM100 is the inherited codebook generated with 100 Lloyd iterations; it is not a converged optimum. A stronger baseline runs four deterministic initializations until both reconstruction-level movement and relative MSE change satisfy strict convergence criteria for ten consecutive iterations. All four yield the same FP16 table. The minimum integrated Gaussian MSE falls from $1.3054680\!\times\!10^{-6}$ to $3.2175846\!\times\!10^{-7}$; Structured's nearest-level MSE is $4.7935449\!\times\!10^{-7}$. Hence Structured is not superior in scalar reconstruction error to converged LM.
+\subsection{End-to-End Performance and Quality}
+We compare Structured K8 with converged LM8, which has lower Gaussian scalar reconstruction MSE. This comparison evaluates complete implementations: both encoding and restoration differ, while the inherited LM encoder retains its FP16 affine reconstruction path. Its rounding can differ from a decoder-LUT lookup, so the results do not establish implementation-independent superiority over Lloyd--Max quantization.
 
 \begin{table*}[t]
 \caption{Repeated on-device performance with matched layer masks. Values are mean $\pm$ sample SD across ten measured sessions per configuration, excluding warm-up. Improvements denote lower TTFT or higher throughput relative to converged LM8, computed from group means. Every configuration allocates 28.875 MiB of host KV storage.}
@@ -154,9 +154,7 @@ Boundary & TTFT (ms) & $726.580\pm13.099$ & $500.487\pm9.512$ & 31.12\\
 \end{tabular}
 \end{table*}
 
-Table~\ref{tab:lm-repeated} reports the repeated measurements. Under Odd placement, Structured reduces mean TTFT by 32.62\% and increases mean prefill/decode throughput by 48.49\%/13.61\% relative to converged LM8. Under Boundary placement, the corresponding changes are 31.12\%, 45.22\%, and 14.41\%. Thus, the observed performance advantage persists under both tested masks, but is not established for every placement. This comparison changes both encoder structure and decoder, measuring complete implementations rather than the decoder alone.
-
-Supplemental paired-round bootstrap 95\% intervals for TTFT reduction are [31.51, 33.71]\% for Odd and [30.01, 32.23]\% for Boundary; decode-increase intervals are [13.23, 13.91]\% and [14.23, 14.57]\%, respectively. These small-sample, single-device intervals describe this experiment; shared thermal drift may affect them. Earlier single-session timings lacked the same-process warm-up and are not pooled with these results. No quantizer, kernel, or runner optimization was introduced by this repetition, so changes from historical absolute timings are not attributed to algorithm changes.
+Table~\ref{tab:lm-repeated} shows that Structured reduces mean TTFT by 32.62\% under Odd placement and 31.12\% under Boundary placement. Mean decode throughput increases by 13.61\% and 14.41\%, respectively. The speed advantage is observed under both tested masks on this device; the table also reports prefill throughput.
 
 \begin{table}[t]
 \caption{Matched reference-window quality follow-up using the unchanged performance binaries. One teacher-forced pass per window and configuration; 4092 scored targets per configuration. These four WikiText-2 windows are reused, not independently held out.}
@@ -179,34 +177,15 @@ Boundary & LM-conv. & 3.008651 & 20.26006\\
 % Odd LM 23.19331631; Odd Structured 23.61218745;
 % Boundary LM 20.26006037; Boundary Structured 20.16880668.
 
-Table~\ref{tab:lm-ppl} adds the matched quality comparison. Structured has 1.8060\% higher PPL than converged LM8 under Odd placement, but 0.4504\% lower PPL under Boundary placement. Converged LM has lower NLL on three of four Odd windows; under Boundary placement, each quantizer wins on two windows. Thus, the quality ordering depends on placement in these reference windows; the small Boundary aggregate advantage is not evidence of broad-domain or statistically significant superiority.
+On the four reused reference windows in Table~\ref{tab:lm-ppl}, Structured has 1.81\% higher PPL than converged LM8 under Odd placement and 0.45\% lower PPL under Boundary placement. LM has lower NLL on three of four Odd windows, while each method wins on two Boundary windows. Quality ordering is therefore placement-dependent; the small Boundary advantage does not establish broad-domain or statistically significant superiority.
 
-Moving from Odd to Boundary lowers reference PPL by 14.5831\% for Structured and 12.6470\% for converged LM. Per-window NLL sums and input token hashes reproduce the historical Odd Structured, Odd converged-LM, and Boundary Structured results at stored JSON precision. Boundary converged LM is the new matched quality control. No codebook, kernel, runner, or layer-selection rule is changed by this follow-up, and the scores are not additional timing samples.
+An earlier, separate Odd-placement evaluation on four held-out documents (set A) reports 1.16\% higher PPL for Structured: 16.4049 versus 16.2165 for converged LM~\cite{artifact}. This historical result is distinct from the reference-window follow-up and the uniform comparison below.
 
-\begin{table}[t]
-\caption{Earlier Odd-placement quality retained separately. Held-out set A is not rescored in the follow-up; its results are not transferred to Boundary placement. Reference rows also retain the historical LM100 control.}
-\label{tab:lm}
-\centering
-\setlength{\tabcolsep}{3.5pt}
-\begin{tabular}{@{}lrrr@{}}
-\toprule
-Metric & LM100 & LM-conv. & Structured\\
-\midrule
-Reference PPL & 23.9835 & 23.1933 & 23.6122\\
-Held-out PPL (A) & 16.3974 & 16.2165 & 16.4049\\
-\bottomrule
-\end{tabular}
-\end{table}
-
-Table~\ref{tab:lm} retains the earlier LM100 control and held-out set A findings. Structured's held-out PPL is 1.16\% higher than converged LM under Odd placement. This remains historical evidence, not a new held-out score from the follow-up. Together, the repeated timings, matched reference PPL, and separately reported held-out results characterize the evaluated quality--efficiency trade-offs without assuming that the quality ordering generalizes across placements or documents.
-
-The LM encoder retains an implementation-specific FP16 affine interpolation path: rounding can differ from a direct decoder-LUT lookup. The earlier convergence experiment changed only LM constants, and the repeated experiment leaves this path unchanged. The results characterize the evaluated implementations, not implementation-independent superiority over Lloyd--Max quantization.
-
-\subsection{Comparison with a Single-Spacing Uniform Quantizer}
-The uniform baseline uses a symmetric 256-level mid-rise grid. A single spacing is fitted under the same Gaussian model without KV- or PPL-based tuning, then frozen to FP16. Both uniform and Structured variants use arithmetic HVX decoders, the same Odd placement, and identical cache storage. This comparison tests whether a second spacing provides a useful quality--cost trade-off.
+\subsection{Comparison with Uniform Quantization}
+The uniform baseline uses a symmetric 256-level grid with one spacing fitted under the same Gaussian model, without KV- or PPL-based tuning, and frozen to FP16. Both variants use arithmetic HVX decoders and the same Odd placement, allowing a comparison of single- and two-region quantization under matched deployment settings.
 
 \begin{table}[t]
-\caption{Uniform versus Structured K8 with fixed Odd placement. Timing is mean $\pm$ sample SD over three crossed runs. Held-out set B differs from A in Table~\ref{tab:lm}.}
+\caption{Uniform versus Structured K8 with fixed Odd placement. Timing is mean $\pm$ sample SD over three crossed runs. Held-out set B differs from the earlier LM held-out set A.}
 \label{tab:uniform}
 \centering
 \setlength{\tabcolsep}{4pt}
@@ -223,10 +202,10 @@ Decode (tokens/s) & $37.177\pm0.024$ & $37.112\pm0.057$\\
 \end{tabular}
 \end{table}
 
-In Table~\ref{tab:uniform}, Structured reduces held-out PPL by 11.28\% relative to Uniform. The measured throughput differences are small and ranges overlap, so the results do not demonstrate a meaningful end-to-end speed advantage for either variant. Structured improves NLL on three of four held-out documents, but one document accounts for approximately 79.65\% of the net NLL gain. This limited result must not be extrapolated to every document or domain.
+In Table~\ref{tab:uniform}, Structured reduces PPL by 11.28\% on the separate four-document held-out set B. The three-run timings have small differences and overlapping ranges, providing no clear speed advantage for either variant. Structured improves NLL on three documents, but one accounts for 79.65\% of the net gain. The quality benefit is therefore limited evidence from this small set.
 
-\subsection{Encoder Cost}
-The standalone Structured K8 encoder has 76 ONNX nodes, versus 837 in the inherited LM8 encoder; scalar indexing and level/scale reconstruction account for most of this difference. Node counts describe graph structure, not a proportional reduction in runtime. A more direct diagnostic uses a shared captured layer-0 input and 128-token encoder probes, summarized in Table~\ref{tab:encoder}. The converged LM codebook retains the same tree and reconstruction-level selection structure as LM100, whereas Structured replaces them with arithmetic operations.
+\subsection{Encoder and Decoder Analysis}
+The standalone Structured K8 encoder has 76 ONNX nodes, compared with 837 in the inherited LM8 encoder, mainly through simpler scalar indexing and level/scale reconstruction. In the single AR128 probe using the same captured layer-0 input (Table~\ref{tab:encoder}), SDK execute time decreases from 3187 to 1523~$\mu$s. These observations support the reduced implementation cost; node counts do not imply proportional runtime reductions.
 
 \begin{table}[t]
 \caption{AR128 encoder probe on the same captured input. Named-op cycle counters are not disjoint physical occupancy or elapsed time. Each result is a single instrumented probe.}
@@ -244,10 +223,9 @@ SDK execute ($\mu$s) & 3,187 & 1,523\\
 \end{tabular}
 \end{table}
 
-The observed decrease in index and scale-reconstruction work is consistent with the simplified representation. However, these named-op counters cannot be added as independent stage latencies, nor can the isolated execute times be substituted for full-model TTFT. Normalization, rotation, output casting, and runtime scheduling remain part of the complete path. The result supports the implementation mechanism rather than a hardware-independent complexity-to-speedup conversion.
+The encoder's named-op cycle counts cannot be added as independent stage latencies or equated with physical vector-unit occupancy. Its isolated execute time also cannot substitute for full-model TTFT, which includes normalization, rotation, output casting, and runtime scheduling.
 
-\subsection{Same-Codebook Decoder Ablation}
-To isolate restoration, Table~\ref{tab:decoder} compares the Structured LUT control and arithmetic decoder using identical codes, scales, and reconstruction levels for a 256-token probe. Their outputs are bit-exact against the FP16 reference. Arithmetic uses 39.56\% fewer physical HVX busy cycles, while SDK execute time changes much less. Busy work, overlapping vector-lane activity, and elapsed execution time are distinct quantities; 39.56\% is not a whole-model decoding speedup. Decoder validation additionally covers all byte codes, edge scales, and partial tiles at multiple token lengths.
+For restoration, Table~\ref{tab:decoder} compares the Structured LUT control and arithmetic decoder using identical codes, scales, and reconstruction levels in a single 256-token probe. Both produce outputs bit-exact against the FP16 reference. Arithmetic reduces physical HVX busy cycles by 39.56\%, while SDK execute time decreases only from 4469 to 4429~$\mu$s (about 0.9\%). The cycle reduction measures vector-unit work, not whole-model decoding speedup. Additional decoder checks cover all byte codes, edge scales, and partial tiles.
 
 \begin{table}[t]
 \caption{Same-codebook Structured decoder probe: one instrumented 256-token invocation per variant.}
@@ -265,41 +243,12 @@ Execute excluding wait ($\mu$s) & 769 & 653\\
 \end{tabular}
 \end{table}
 
-\subsection{Supporting Layer-Placement and Profiling Results}
-A separate placement experiment keeps exactly 14 Structured K8 layers and 14 LM K4 layers, with V2 unchanged. It uses 12 search windows, four selection-validation windows, and eight previously unused documents from the official WikiText validation partition as an independent test. The final mask is frozen by HTP validation NLL before test scoring; the test does not retrospectively select a winner.
-
-Table~\ref{tab:allocation} summarizes this separate experiment. Its performance measurements use three crossed rounds, with all 21 sessions retained. The selected Multi-start Beam/Swap candidate obtains test PPL 19.7872, compared with 25.0496 for Odd and 20.3067 for the legacy Odd-start Greedy search. However, static Early placement reaches 19.6484 and Multi-start Greedy reaches 19.7279. Moreover, 19 of 196 checked single-swap neighbors improve the selected candidate's offline search NLL. We therefore claim neither optimal placement nor an accuracy/efficiency advantage for Beam search. These results illustrate placement sensitivity and are not substituted for the fixed-placement quantizer comparisons.
-
-\begin{table}[t]
-\caption{Earlier supporting placement experiment, separate from Table~\ref{tab:lm-repeated}. Test C has eight documents and differs from A/B. TTFT is mean $\pm$ sample SD from three crossed rounds. All rows allocate 28.875 MiB host KV.}
-\label{tab:allocation}
-\centering
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{@{}lrr@{}}
-\toprule
-Configuration & Test PPL (C) & TTFT (ms)\\
-\midrule
-Odd & 25.0496 & $510.14\pm25.25$\\
-Early & 19.6484 & $491.01\pm2.72$\\
-Boundary & 20.0705 & $490.69\pm3.33$\\
-Legacy Greedy & 20.3067 & $503.11\pm28.62$\\
-Multi-start Greedy & 19.7279 & $510.99\pm20.81$\\
-Beam/Swap (selected) & 19.7872 & $508.78\pm26.64$\\
-LM K6/V2 & 20.7267 & $626.00\pm13.43$\\
-\bottomrule
-\end{tabular}
-\end{table}
-
-Against the uniform-across-layers LM K6/V2 configuration in this experiment, the selected candidate has 18.73\% lower mean TTFT and 7.17\% higher mean decode throughput (37.272 versus 34.777 tokens/s). This comparison changes both layerwise precision and quantizer implementation, so it is not an isolated layer-search speedup. Search methods also use unequal offline budgets: the observed Beam search takes more time than Multi-start Greedy while producing worse test NLL. We retain the validation-selected candidate instead of promoting Early after observing its test result.
-
-A separate single instrumented session indicates that V2 accounts for 75.98\% of attributed prefill packing/output-cast work, while past-KV restoration accounts for 33.065\% of final-step compute busy cycles. This identifies remaining optimization targets rather than eliminating them. The trace attributes Dense rotation to HMX and native restoration to HVX. Its historical controls use different runner/native-library hashes; comparisons across those traces are descriptive, not paired isolated-kernel speedup measurements.
-
 \section{Limitations and Conclusion}
 The repeated LM comparison covers one model, one device, one prompt, context capacity 1024, and two masks in one measurement campaign. Ten warmed runs per configuration characterize within-experiment variability, not variation across devices, days, or workloads. The quality follow-up adds a matched Boundary PPL comparison, but uses only four previously evaluated reference windows, scored once each. It introduces neither an independent held-out test nor a statistical-significance claim; the earlier held-out evidence remains limited to small document subsets. The earlier three-run uniform comparison and single-session codec probes retain their own sampling limitations.
 
 Recorded current AP temperatures range from 26.0 to 44.4 degrees Celsius, with Android thermal status and reported sensor severity zero throughout. These observations do not prove the absence of HTP throttling: no direct HTP clock/throttle counter was available. Temperature/order associations remain despite counterbalancing, and no adjustment or sample filtering is applied. We claim no energy, sustained thermal-performance, long-context task, or total accelerator-memory result. The 28.875 MiB figure is allocated host KV storage; separate runtime I/O buffers occupy approximately 96.929 MiB.
 
-Numerical validation also has limits. The inherited LM100 AR128 encoder scale check and a standalone V4 probe exceed the unchanged 0.2\% tolerance. The V4 probe is not the full-model V2 path. Graph/hash audits and repeated timings do not re-certify these numerical tolerances, and the failures are not waived by decoder bit-exactness or acceptable PPL.
+Numerical validation also has limits. The AR128 encoder scale check for the inherited LM baseline (100 Lloyd iterations) and a standalone V4 probe exceed the unchanged 0.2\% tolerance. The V4 probe is not the full-model V2 path. Graph/hash audits and repeated timings do not re-certify these numerical tolerances, and the failures are not waived by decoder bit-exactness or acceptable PPL.
 
 Within this scope, Structured K8 provides a practical specialization of piecewise-uniform quantization for mobile KV caching. Arithmetic indexing and HVX restoration preserve a compact cache while reducing mean TTFT by 32.62\%/31.12\% and increasing mean decode throughput by 13.61\%/14.41\% under Odd/Boundary placement. On the four reused reference windows, Structured's PPL is 1.8060\% higher than converged LM under Odd placement and 0.4504\% lower under Boundary placement. Quality ordering is therefore placement-dependent within this evaluation, while the speed advantage is observed under both tested masks. The historical held-out and uniform comparisons remain separate, limited evidence. Future work should prioritize V2 packing, layout conversion, past-KV restoration, and evaluation across models, contexts, workloads, and independent measurement campaigns.
 
