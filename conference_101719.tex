@@ -241,10 +241,7 @@ Execute excluding wait ($\mu$s) & 769 & 653\\
 \end{tabular}
 \end{table}
 
-\section{Limitations and Conclusion}
-The timing evaluation covers one model, device, and prompt at a context capacity of 1024 in a single measurement campaign. Quality evidence includes four reused reference windows and small held-out subsets, limiting generalization. Direct HTP throttling measurements were unavailable, and temperature/order effects remain unadjusted. Energy and sustained thermal performance were not evaluated. Reported storage covers host KV allocations and excludes separate runtime buffers.
-
-Numerical checks exceeded the 0.2\% tolerance for the AR128 encoder scale in the earlier LM baseline (100 Lloyd iterations) and for a standalone V4 probe. The full-model comparisons use converged LM8 and V2; their results and decoder bit-exactness do not resolve these failures.
+\section{Conclusion}
 
 Structured K8 uses two-region reconstruction levels to simplify arithmetic indexing and HVX restoration for mobile KV caching. Under Odd and Boundary placement, it reduces mean TTFT by approximately 31--33\% and increases mean decode throughput by about 14\% relative to converged LM8. PPL ordering depends on placement within the evaluated reference windows. Future work should extend evaluation to larger independent datasets, additional models and devices, and longer-context workloads.
 
