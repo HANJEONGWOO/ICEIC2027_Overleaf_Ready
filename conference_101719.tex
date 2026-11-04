@@ -156,27 +156,26 @@ We compare Structured K8 with Lloyd--Max K8, which has lower Gaussian scalar rec
 Under Boundary placement, Fig.~\ref{fig:performance} shows that Structured reduces mean TTFT by 31.12\% and increases prefill and decode throughput by 45.22\% and 14.41\%, respectively. Separate Odd-placement runs show a 32.62\% TTFT reduction and 48.49\% and 13.61\% higher prefill and decode throughput, respectively. The speed advantage is observed under both tested masks on this device.
 
 \begin{table}[t]
-\caption{Matched reference-window quality follow-up using the unchanged performance binaries. One teacher-forced pass per window and configuration; 4092 scored targets per configuration. These four WikiText-2 windows are reused, not independently held out.}
+\caption{Reference-window PPL reduction from Odd to Boundary placement.}
 \label{tab:lm-ppl}
 \centering
 \setlength{\tabcolsep}{4pt}
-\begin{tabular}{@{}llrr@{}}
+\begin{tabular}{@{}lrrr@{}}
 \toprule
-Placement & K8 codec & Mean NLL & PPL $\downarrow$\\
+K8 codec & \shortstack{Odd\\PPL $\downarrow$} & \shortstack{Boundary\\PPL $\downarrow$} & \shortstack{Reduction\\(\%)}\\
 \midrule
-Odd & Lloyd--Max & 3.143864 & 23.19332\\
- & Structured & 3.161763 & 23.61219\\
-\midrule
-Boundary & Lloyd--Max & 3.008651 & 20.26006\\
- & Structured & 3.004137 & 20.16881\\
+Lloyd--Max & 23.19 & \textbf{20.26} & 12.65\\
+Structured & 23.61 & \textbf{20.17} & 14.58\\
 \bottomrule
 \end{tabular}
 \end{table}
 % Full-precision source PPLs (README at b438a098c):
 % Odd Lloyd--Max 23.19331631; Odd Structured 23.61218745;
 % Boundary Lloyd--Max 20.26006037; Boundary Structured 20.16880668.
+% Previously reported mean NLLs: Odd Lloyd--Max 3.143864; Structured 3.161763;
+% Boundary Lloyd--Max 3.008651; Structured 3.004137.
 
-On the four reused reference windows in Table~\ref{tab:lm-ppl}, Structured has 1.81\% higher PPL than Lloyd--Max K8 under Odd placement and 0.45\% lower PPL under Boundary placement. Lloyd--Max has lower NLL on three of four Odd windows, while each method wins on two Boundary windows. Quality ordering is therefore placement-dependent.
+On the four reused reference windows (Table~\ref{tab:lm-ppl}), Boundary lowers PPL by 12.65\% for Lloyd--Max and 14.58\% for Structured relative to Odd. Structured's PPL is 1.81\% higher than Lloyd--Max under Odd and 0.45\% lower under Boundary. Lloyd--Max wins three Odd windows; each codec wins two Boundary windows.
 
 \subsection{Comparison with Uniform Quantization}
 The uniform baseline uses a symmetric 256-level grid with one spacing fitted under the same Gaussian model, without KV- or PPL-based tuning, and frozen to FP16. Both variants use arithmetic HVX decoders and the same Odd placement, allowing a comparison of single- and two-region quantization under matched deployment settings.
