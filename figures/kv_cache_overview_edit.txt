@@ -1,15 +1,49 @@
-Method: built-in image_gen.imagegen, edit with referenced_image_paths.
-Source: /home/hjw/git/ICEIC2027_Overleaf_Ready/figures/kv_cache_overview.png
-Generated result: /home/hjw/.codex/generated_images/01a1a730-dce4-7651-99af-f81de550db28/exec-f15e8a8c-f0ff-491d-8128-28394237df27.png
-Target: figures/kv_cache_overview.png
-Inspection: Both replacement headers rendered correctly; all scientific labels/equations, arrows, diagrams and layout visually retained in generated tool preview. Original 1942x809; generated 1944x809.
+Current overview: flat, editable vector diagram (2026-11-05).
 
-Exact prompt:
-Use case: text-localization.
-Asset type: existing scientific paper overview figure.
-Input image: edit target, preserve it exactly except for the following TWO header text replacements.
-1. In the top right pale teal header, replace "Bit-dependent K Quantizer Selection (Ours)" with the exact text "Bit-Width-Aware Quantizer Selection".
-2. In the right middle dark teal K8 header, replace "K8: Structured 8-bit Quantization (Ours)" with the exact text "K8: Piecewise-Uniform Quantization (PU-K8)".
-Match the existing bold serif typography, header positioning, foreground colors (black top header, white K8 header), and surrounding background. Fit replacement text within its current header using a slightly smaller font only if needed.
-Strict invariants: change ONLY these two text areas. Preserve every other word, label, equation, mathematical subscript, value, arrow, plot, graph, diagram, block, color, texture, spacing, aspect ratio, and full composition. Do not redesign, crop, add, remove, simplify or reinterpret anything. Preserve the three-column scientific infographic and all its scientific details, especially c_{r,k}=a_r+kΔ_r, r∈{0,1}, k∈{0,…,63}, and all K8/V2 and K4/V2 layer labels.
+Build:
+  python figures/plot_kv_cache_overview.py
+Dependencies: numpy, matplotlib, Lato for PDF/SVG/PNG. The editable PowerPoint
+exporter overview_pptx.py uses only Python standard-library XML and ZIP modules.
+Outputs: kv_cache_overview.pdf, .svg, .png, .pptx. The paper includes the PDF.
+The PPTX contains native editable shapes and text, not a flattened bitmap.
 
+Visual design:
+  Three original stages retained: asymmetric KV index budget; Boundary layer
+  allocation; fixed bit-width-aware codec assignment. Flat fills, consistent
+  typography, aligned rectangles, tensor grids, lines and mathematically
+  sampled distributions replace the previous generated raster illustration.
+  Key/value index bar is exactly 3:1 (average K6 / V2, excluding FP16 scales).
+  Qwen3-1.7B layers 1–7 and 22–28 use K8; 8–21 use K4; V2 throughout.
+  Layer-group K output ports connect directly to the selected codec headers:
+  the two K8 branches join at PU-K8; the K4 branch selects Lloyd–Max K4.
+  A white break at the single route crossover indicates no junction. Only
+  the true K8 merge has a dot. These depict fixed per-layer codec selection.
+  A dedicated routing channel replaces the old generic stage-2→3 arrow;
+  all distribution shapes and level positions retain their proportions.
+
+Data:
+  kv_cache_overview_levels.json stores all 16/256/4 actual FP16 decoder levels,
+  original source paths and hashes, the PU-K8 parameters and exact midpoint.
+  All 256 PU-K8 levels are plotted as ticks; K4/V2 levels are plotted as dots.
+  No decorative or selected subset of levels is used.
+  Smooth curves: the design model N(0,1/128) in y, equivalently N(0,1) in
+  z=sqrt(128)*y. This model is not fitted to the plotted samples.
+  Gray traces: densities from captured Qwen3-1.7B W4A16 HTP FP16-KV outputs,
+  transformed offline with the existing CPU FP16 normalization/rotation
+  emulator. They are not directly captured post-rotation HTP coordinates.
+  Two validation documents, 28 layers, 8 KV heads, 32 valid sampled token
+  positions per document/layer; total 1,835,008 scalar coordinates per K/V.
+  K4 plot: middle layers; K8 plot: boundary layers; V2 plot: all layers.
+  Source hashes, valid-token checks and bins are retained in
+  kv_cache_overview_density.json. Extraction scripts require the source
+  implementation/captures and accept --repo / --captures / --out overrides.
+  Routine figure builds read the saved JSON and do not run inference.
+
+Validation:
+  All signed level counts, ordering and source values checked; sample densities
+  and Gaussian model are distinguished; paper compiles to four pages.
+  PPTX structure, internal references and native shapes validated. Rendering
+  in Microsoft PowerPoint / LibreOffice was not tested (apps unavailable).
+
+History:
+  This replaces the prior image-generation edit recorded in Git history.

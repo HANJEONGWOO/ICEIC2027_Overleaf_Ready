@@ -13,8 +13,8 @@
 % PPL: one teacher-forced pass/window/configuration on four REUSED reference
 % windows (4092 targets/configuration); no new independent held-out evaluation.
 % Performance: ten warmed measured sessions/configuration, kept separate.
-% Compile with pdfLaTeX; include the overview PNG and performance PDF in figures/.
-% Overview labels follow the paper terminology; schematic notation is clarified below.
+% Compile with pdfLaTeX; vector figures and their reproducible sources are in figures/.
+% Overview distributions and FP16 levels are reproduced from documented implementation data.
 % Bibliography entries are embedded in this file.
 % Results are transcribed from the author's committed experiment reports;
 % this drafting process did not rerun the device experiments.
@@ -66,8 +66,8 @@ We present a bit-width-aware KV cache design that retains Lloyd--Max for K4/V2 a
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=\textwidth]{figures/kv_cache_overview.png}
-\caption{Overview of the bit-width-aware KV cache design with Boundary placement. Left: asymmetric key/value index budgeting. Center: layerwise K4/K8 allocation. Right: fixed codec assignment using Lloyd--Max for K4/V2 and PU-K8 for K8. Distributions, block proportions, and level markers are schematic; K4, K8, and V2 use 16, 256, and 4 signed reconstruction levels, respectively. Sensitivity and importance labels express the design motivation rather than a measured universal ranking.}
+\includegraphics[width=\textwidth]{figures/kv_cache_overview.pdf}
+\caption{Bit-width-aware KV cache design with Boundary placement; connectors map each layer group's K precision to its quantizer. The right panel shows the Gaussian design model and all frozen FP16 reconstruction levels (16/256/4 for K4/K8/V2). Gray traces use captured Qwen3-1.7B KV samples with CPU-emulated normalization and rotation, plotted as $z=\sqrt{d}\,y$ with $d=128$.}
 \label{fig:overview}
 \end{figure*}
 
@@ -94,7 +94,7 @@ The three panels in Fig.~\ref{fig:overview} connect the storage budget to the de
 
 The center panel illustrates Boundary placement, with K8 assigned to the first and last seven of 28 layers. The drawing numbers layers from 1 to $L$; our experimental masks use zero-based indices. Odd placement is also evaluated under the same storage budget. These placements instantiate the precision allocation used to compare quantizer implementations.
 
-The right panel shows the fixed codec assignment: Lloyd--Max for K4/V2 and PU-K8 for K8. Its scalar axis $x$ represents a normalized, rotated coordinate, denoted $y$ below, and $c_{r,k}$ denotes a positive reconstruction level. The following subsections specify arithmetic indexing and native HVX decoding.
+The connectors map each layer group's allocated key precision to a fixed codec: Lloyd--Max for K4 and PU-K8 for K8; all values retain Lloyd--Max V2. The standardized axis $z=\sqrt{d}\,y$ rescales the normalized, rotated coordinate $y$ used below. The plots overlay sample densities and the Gaussian design model, with the deployed FP16 reconstruction levels. The following subsections specify arithmetic indexing and native HVX decoding.
 
 \subsection{Quantization Levels and Arithmetic Indexing}
 The proposed key cache uses Lloyd--Max K4 and PU-K8. For bit width $p$, the positive reconstruction levels are
