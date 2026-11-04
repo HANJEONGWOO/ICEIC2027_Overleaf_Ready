@@ -27,9 +27,9 @@ HERE = Path(__file__).resolve().parent
 CAPACITIES = (1024, 2048, 4096, 8192)
 DEPTHS = (0, 25, 50, 75, 100)
 PANELS = (
-    ("fp16", "FP16 KV/attention"),
-    ("boundary_structured", "Boundary Structured K8"),
-    ("boundary_lm", "Boundary Lloyd–Max K8"),
+    ("fp16", "FP16"),
+    ("boundary_structured", "PU-K8 (ours)"),
+    ("boundary_lm", "Lloyd–Max K8"),
     ("k4_v4", "TurboQuant K4/V4"),
 )
 TEXT = "#222831"

@@ -1,0 +1,15 @@
+Method: built-in image_gen.imagegen, edit with referenced_image_paths.
+Source: /home/hjw/git/ICEIC2027_Overleaf_Ready/figures/kv_cache_overview.png
+Generated result: /home/hjw/.codex/generated_images/01a1a730-dce4-7651-99af-f81de550db28/exec-f15e8a8c-f0ff-491d-8128-28394237df27.png
+Target: figures/kv_cache_overview.png
+Inspection: Both replacement headers rendered correctly; all scientific labels/equations, arrows, diagrams and layout visually retained in generated tool preview. Original 1942x809; generated 1944x809.
+
+Exact prompt:
+Use case: text-localization.
+Asset type: existing scientific paper overview figure.
+Input image: edit target, preserve it exactly except for the following TWO header text replacements.
+1. In the top right pale teal header, replace "Bit-dependent K Quantizer Selection (Ours)" with the exact text "Bit-Width-Aware Quantizer Selection".
+2. In the right middle dark teal K8 header, replace "K8: Structured 8-bit Quantization (Ours)" with the exact text "K8: Piecewise-Uniform Quantization (PU-K8)".
+Match the existing bold serif typography, header positioning, foreground colors (black top header, white K8 header), and surrounding background. Fit replacement text within its current header using a slightly smaller font only if needed.
+Strict invariants: change ONLY these two text areas. Preserve every other word, label, equation, mathematical subscript, value, arrow, plot, graph, diagram, block, color, texture, spacing, aspect ratio, and full composition. Do not redesign, crop, add, remove, simplify or reinterpret anything. Preserve the three-column scientific infographic and all its scientific details, especially c_{r,k}=a_r+kΔ_r, r∈{0,1}, k∈{0,…,63}, and all K8/V2 and K4/V2 layer labels.
+

@@ -6,8 +6,8 @@ Requires: matplotlib and the Lato font family. No experiments are run.
 Source: ai-hub-models/scripts/llm/turboquant/README.md, "Isolated codec costs".
 The CSV retains the timing and encoder named-op measurements used in the paper.
 Encoder: one instrumented AR128 probe on the same captured layer-0 K input.
-Decoder: one 256-token invocation, comparing Structured LUT control with
-Structured arithmetic using identical codes, scales, and reconstruction levels.
+Decoder: one 256-token invocation, comparing PU-K8 LUT control with
+PU-K8 arithmetic using identical codes, scales, and reconstruction levels.
 These are different probes, not additive components of end-to-end latency.
 No repeated-run SD is available. Execution-time panels share a zero-based scale.
 Only the printed relative changes are rounded; raw integer values are retained.
@@ -33,8 +33,8 @@ TEXT = "#222831"
 SECONDARY = "#66717E"
 ACCENT_TEXT = "#244A8A"
 METHODS = {
-    "Encoder": ("Lloyd–Max K8", "Structured K8"),
-    "Decoder": ("Structured LUT control", "Structured arithmetic"),
+    "Encoder": ("Lloyd–Max K8", "PU-K8"),
+    "Decoder": ("PU-K8 LUT control", "PU-K8 arithmetic"),
 }
 
 with (HERE / "kv_cache_codec_costs.csv").open(newline="", encoding="utf-8") as stream:
@@ -63,8 +63,8 @@ fig = plt.figure(figsize=(3.45, figure_height))
 # The comparisons use different baselines. Keep separate method legends,
 # and label the component directly above each execution-time panel.
 for center, labels in (
-    (0.25, ("Lloyd–Max K8", "Structured K8")),
-    (0.75, ("Lookup Table", "Arithmetic")),
+    (0.25, ("Lloyd–Max K8", "PU-K8 (ours)")),
+    (0.75, ("Lookup Table", "Arithmetic (ours)")),
 ):
     handles = [Patch(facecolor=color, edgecolor=edge, linewidth=0.35, label=label)
                for color, edge, label in zip(COLORS, EDGES, labels)]

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rebuild the Uniform/Structured comparison using the Fig. 2 visual style.
+"""Rebuild the Uniform/PU-K8 comparison using the Fig. 2 visual style.
 
 Run: python figures/plot_kv_cache_uniform_comparison.py
 Requires: matplotlib, numpy, and the Lato font family. No experiments are run.
@@ -28,7 +28,7 @@ import numpy as np
 
 
 HERE = Path(__file__).resolve().parent
-METHODS = ("Uniform K8", "Structured K8")
+METHODS = ("Uniform K8", "PU-K8")
 # A neutral baseline and one saturated accent distinguish methods in a small
 # panel; their luminance contrast also preserves the distinction in grayscale.
 COLORS = ("#D4D7DE", "#3766BD")
@@ -60,7 +60,8 @@ plt.rcParams.update({
 # Reserve a separate legend row without shrinking the bars or their value labels.
 figure_height = 1.74
 fig = plt.figure(figsize=(3.45, figure_height))
-legend = [Patch(facecolor=color, edgecolor=edge, linewidth=0.35, label=method)
+legend = [Patch(facecolor=color, edgecolor=edge, linewidth=0.35,
+                label=f"{method} (ours)" if method == "PU-K8" else method)
           for color, edge, method in zip(COLORS, EDGES, METHODS)]
 fig.legend(handles=legend, loc="upper center", bbox_to_anchor=(0.50, 0.99),
            ncol=2, frameon=False, fontsize=7.4, handlelength=1.1,
@@ -132,7 +133,7 @@ for left, (metric, title, direction, unit, ymax, precision) in zip(positions, pa
             fontsize=7.1, fontweight="semibold", color=ACCENT_TEXT)
 
 for extension in ("pdf", "png"):
-    metadata = {"Creator": "Matplotlib", "Title": "Uniform versus Structured K8: Odd-placement performance and held-out PPL"}
+    metadata = {"Creator": "Matplotlib", "Title": "Uniform versus PU-K8: Odd-placement performance and held-out PPL"}
     if extension == "pdf":
         metadata.update({"CreationDate": None, "ModDate": None})
     fig.savefig(HERE / f"kv_cache_uniform_comparison.{extension}", dpi=300, metadata=metadata)

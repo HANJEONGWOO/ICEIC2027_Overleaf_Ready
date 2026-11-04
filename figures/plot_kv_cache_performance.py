@@ -27,7 +27,7 @@ import numpy as np
 
 HERE = Path(__file__).resolve().parent
 PLACEMENT = "Boundary"
-METHODS = ("Lloyd–Max K8", "Structured K8")
+METHODS = ("Lloyd–Max K8", "PU-K8")
 # A neutral baseline and one saturated accent distinguish methods in a small
 # panel; their luminance contrast also preserves the distinction in grayscale.
 COLORS = ("#D4D7DE", "#3766BD")
@@ -65,7 +65,8 @@ plt.rcParams.update({
 # Reserve a separate legend row without shrinking the bars or their value labels.
 figure_height = 1.74
 fig = plt.figure(figsize=(3.45, figure_height))
-legend = [Patch(facecolor=color, edgecolor=edge, linewidth=0.35, label=method)
+legend = [Patch(facecolor=color, edgecolor=edge, linewidth=0.35,
+                label=f"{method} (ours)" if method == "PU-K8" else method)
           for color, edge, method in zip(COLORS, EDGES, METHODS)]
 fig.legend(handles=legend, loc="upper center", bbox_to_anchor=(0.50, 0.99),
            ncol=2, frameon=False, fontsize=7.4, handlelength=1.1,

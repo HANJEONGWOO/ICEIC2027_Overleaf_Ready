@@ -1,11 +1,11 @@
 component,metric,unit,method,value,probe_tokens,probe_count
 Encoder,SDK execute,us,Lloyd–Max K8,3187,128,1
-Encoder,SDK execute,us,Structured K8,1523,128,1
+Encoder,SDK execute,us,PU-K8,1523,128,1
 Encoder,Scalar-index cycles,cycles,Lloyd–Max K8,15666367,128,1
-Encoder,Scalar-index cycles,cycles,Structured K8,1146338,128,1
+Encoder,Scalar-index cycles,cycles,PU-K8,1146338,128,1
 Encoder,Norm/scale cycles,cycles,Lloyd–Max K8,12195259,128,1
-Encoder,Norm/scale cycles,cycles,Structured K8,822695,128,1
-Decoder,SDK execute,us,Structured LUT control,4469,256,1
-Decoder,SDK execute,us,Structured arithmetic,4429,256,1
-Decoder,Execute excluding wait,us,Structured LUT control,769,256,1
-Decoder,Execute excluding wait,us,Structured arithmetic,653,256,1
+Encoder,Norm/scale cycles,cycles,PU-K8,822695,128,1
+Decoder,SDK execute,us,PU-K8 LUT control,4469,256,1
+Decoder,SDK execute,us,PU-K8 arithmetic,4429,256,1
+Decoder,Execute excluding wait,us,PU-K8 LUT control,769,256,1
+Decoder,Execute excluding wait,us,PU-K8 arithmetic,653,256,1
