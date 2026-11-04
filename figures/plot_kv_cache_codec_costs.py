@@ -64,7 +64,7 @@ fig = plt.figure(figsize=(3.45, figure_height))
 # and label the component directly above each execution-time panel.
 for center, labels in (
     (0.25, ("Lloyd–Max K8", "PU-K8 (ours)")),
-    (0.75, ("Lookup Table", "Arithmetic (ours)")),
+    (0.75, ("Lloyd–Max K8", "PU-K8 (ours)")),
 ):
     handles = [Patch(facecolor=color, edgecolor=edge, linewidth=0.35, label=label)
                for color, edge, label in zip(COLORS, EDGES, labels)]
