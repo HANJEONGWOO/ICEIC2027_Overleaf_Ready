@@ -10,7 +10,7 @@
 % PPL: one teacher-forced pass/window/configuration on four REUSED reference
 % windows (4092 targets/configuration); no new independent held-out evaluation.
 % Performance: ten warmed measured sessions/configuration, kept separate.
-% Compile with pdfLaTeX; include figures/kv_cache_overview.png with this source.
+% Compile with pdfLaTeX; include the overview PNG and performance PDF in figures/.
 % The supplied overview is reproduced unchanged; its schematic notation is clarified below.
 % Bibliography entries are embedded in this file.
 % Results are transcribed from the author's committed experiment reports;
@@ -132,28 +132,6 @@ The logical floor rule rounds half-step ties upward. Execution uses a stored rec
 \end{equation}
 For negative values, the magnitude index is reflected to preserve compatibility with the existing ascending LUT layout. The decoder recovers $j=b-128$ for $b\geq128$ and $j=127-b$ otherwise.
 
-% Queue the double-column results table early so it appears near its
-% discussion without delaying the following single-column tables.
-\begin{table*}[t]
-\caption{Repeated on-device performance with matched layer masks. Values are mean $\pm$ sample SD across ten measured sessions per configuration, excluding warm-up. Improvements denote lower TTFT or higher throughput relative to Lloyd--Max K8, computed from group means. Every configuration allocates 28.875 MiB of host KV storage.}
-\label{tab:lm-repeated}
-\centering
-\setlength{\tabcolsep}{8pt}
-\begin{tabular}{@{}llrrr@{}}
-\toprule
-Placement & Metric & Lloyd--Max K8 & Structured K8 & Improvement (\%)\\
-\midrule
-Odd & TTFT (ms) & $745.990\pm11.668$ & $502.653\pm12.595$ & 32.62\\
- & Prefill (tokens/s) & $1203.854\pm19.009$ & $1787.642\pm44.911$ & 48.49\\
- & Decode (tokens/s) & $33.249\pm0.053$ & $37.775\pm0.232$ & 13.61\\
-\midrule
-Boundary & TTFT (ms) & $726.580\pm13.099$ & $500.487\pm9.512$ & 31.12\\
- & Prefill (tokens/s) & $1236.104\pm22.874$ & $1795.119\pm34.854$ & 45.22\\
- & Decode (tokens/s) & $33.101\pm0.051$ & $37.870\pm0.121$ & 14.41\\
-\bottomrule
-\end{tabular}
-\end{table*}
-
 \subsection{HVX Arithmetic Decoder}
 The native HVX decoder recovers $r$ and $k$ from each stored byte and reconstructs $a_r+k\Delta_r$ using separate FP16 multiply and add operations. It then applies the sign and the effective FP16 scale used for norm correction, producing FP16 tiles for the existing attention path. Vectorized decoding avoids level-table loads and per-coordinate scalar loops. The coefficient payload is four FP16 values (8 bytes), replacing a 256-entry FP16 codebook (512 bytes).
 
@@ -168,7 +146,14 @@ Quality is evaluated by teacher-forced perplexity on four reused WikiText-2~\cit
 \subsection{End-to-End Performance and Quality}
 We compare Structured K8 with Lloyd--Max K8, which has lower Gaussian scalar reconstruction MSE. This comparison evaluates complete implementations.
 
-Table~\ref{tab:lm-repeated} shows that Structured reduces mean TTFT by 32.62\% under Odd placement and 31.12\% under Boundary placement. Mean decode throughput increases by 13.61\% and 14.41\%, respectively. The speed advantage is observed under both tested masks on this device; the table also reports prefill throughput.
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/kv_cache_performance.pdf}
+\caption{Boundary-placement performance and reference-window PPL. Timing: mean $\pm$ sample SD over 10 runs per configuration, with 897 prompt and 128 generated tokens. Percentages show changes from Lloyd--Max K8.}
+\label{fig:performance}
+\end{figure}
+
+Under Boundary placement, Fig.~\ref{fig:performance} shows that Structured reduces mean TTFT by 31.12\% and increases prefill and decode throughput by 45.22\% and 14.41\%, respectively. Separate Odd-placement runs show a 32.62\% TTFT reduction and 48.49\% and 13.61\% higher prefill and decode throughput, respectively. The speed advantage is observed under both tested masks on this device.
 
 \begin{table}[t]
 \caption{Matched reference-window quality follow-up using the unchanged performance binaries. One teacher-forced pass per window and configuration; 4092 scored targets per configuration. These four WikiText-2 windows are reused, not independently held out.}
