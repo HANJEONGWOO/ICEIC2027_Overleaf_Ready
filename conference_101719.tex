@@ -190,43 +190,16 @@ The uniform baseline uses a symmetric 256-level grid with one spacing fitted und
 In Fig.~\ref{fig:uniform}, Structured reduces PPL by 11.28\% on the separate four-document held-out set B. The three-run timings have small differences and overlapping ranges, providing no clear speed advantage for either variant. Structured improves NLL on three documents, but one accounts for 79.65\% of the net gain. The quality benefit is therefore limited evidence from this small set. Reference-window PPL is 23.7939 for Uniform and 23.6122 for Structured.
 
 \subsection{Encoder and Decoder Analysis}
-The standalone Structured K8 encoder has 76 ONNX nodes, compared with 837 in the inherited Lloyd--Max K8 encoder, mainly through simpler scalar indexing and level/scale reconstruction. In the single AR128 probe using the same captured layer-0 input (Table~\ref{tab:encoder}), SDK execute time decreases from 3187 to 1523~$\mu$s. These observations support the reduced implementation cost.
+The Structured K8 encoder simplifies scalar indexing and level/scale reconstruction, using 76 ONNX nodes versus 837 for Lloyd--Max K8. Its SDK execution time is about 52\% lower in a single AR128 probe using the same input (Fig.~\ref{fig:codec-costs}).
 
-\begin{table}[!t]
-\caption{AR128 encoder probe on the same captured input. Named-op cycle counters are not disjoint physical occupancy or elapsed time. Each result is a single instrumented probe.}
-\label{tab:encoder}
+The Structured LUT and arithmetic decoders use identical codes, scales, and reconstruction levels, and both match the FP16 reference bit-exactly. In a single 256-token probe, arithmetic decoding shows only a 0.9\% lower SDK execution time.
+
+\begin{figure}[!t]
 \centering
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{@{}lrr@{}}
-\toprule
-Metric & Lloyd--Max & Structured\\
-\midrule
-Scalar-index cycles & 15,666,367 & 1,146,338\\
-Norm/scale cycles & 12,195,259 & 822,695\\
-SDK execute ($\mu$s) & 3,187 & 1,523\\
-\bottomrule
-\end{tabular}
-\end{table}
-
-
-
-For KV-cache decoding, Table~\ref{tab:decoder} compares the Structured LUT control and arithmetic decoder using identical codes, scales, and reconstruction levels in a single 256-token probe. Both produce outputs bit-exact against the FP16 reference. Arithmetic reduces physical HVX busy cycles by 39.56\%, while SDK execute time decreases only from 4469 to 4429~$\mu$s (about 0.9\%). The cycle reduction measures vector-unit work, not whole-model decoding speedup. Additional decoder checks cover all byte codes, edge scales, and partial tiles.
-
-\begin{table}[!t]
-\caption{Same-codebook Structured decoder probe: one instrumented 256-token invocation per variant.}
-\label{tab:decoder}
-\centering
-\setlength{\tabcolsep}{5pt}
-\begin{tabular}{@{}lrr@{}}
-\toprule
-Metric & LUT control & Arithmetic\\
-\midrule
-Physical HVX busy cycles & 593,957 & 358,972\\
-SDK execute ($\mu$s) & 4,469 & 4,429\\
-Execute excluding wait ($\mu$s) & 769 & 653\\
-\bottomrule
-\end{tabular}
-\end{table}
+\includegraphics[width=\columnwidth]{figures/kv_cache_codec_costs.pdf}
+\caption{Single-probe SDK execution times: AR128 encoders and 256-token Structured decoders. Percentages show changes from each gray baseline.}
+\label{fig:codec-costs}
+\end{figure}
 
 \FloatBarrier
 \section{Conclusion}
