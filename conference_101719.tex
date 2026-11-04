@@ -197,11 +197,11 @@ The uniform baseline uses a symmetric 256-level grid with one spacing fitted und
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{figures/kv_cache_uniform_comparison.pdf}
-\caption{Odd-placement performance and held-out PPL (set B). Timing: mean $\pm$ sample SD over three runs per configuration, with 897 prompt and 128 generated tokens. Percentages show changes from Uniform K8.}
+\caption{Odd-placement performance and PPL. Timing: mean $\pm$ sample SD over three runs per configuration, with 897 prompt and 128 generated tokens. Percentages show changes from Uniform K8.}
 \label{fig:uniform}
 \end{figure}
 
-In Fig.~\ref{fig:uniform}, PU-K8 reduces PPL by 11.28\% on the separate four-document held-out set B. The three-run timings have small differences and overlapping ranges, providing no clear speed advantage for either variant. PU-K8 improves NLL on three documents, but one accounts for 79.65\% of the net gain. The quality benefit is therefore limited evidence from this small set. Reference-window PPL is 23.7939 for Uniform and 23.6122 for PU-K8.
+In Fig.~\ref{fig:uniform}, PU-K8 reduces PPL by 11.28\% on the separate four-document. The three-run timings have small differences and overlapping ranges, providing no clear speed advantage for either variant. PU-K8 improves NLL on three documents, but one accounts for 79.65\% of the net gain. The quality benefit is therefore limited evidence from this small set. Reference-window PPL is 23.7939 for Uniform and 23.6122 for PU-K8.
 
 \subsection{Encoder and Decoder Analysis}
 The PU-K8 encoder simplifies scalar indexing and level/scale reconstruction, using 76 ONNX nodes versus 837 for Lloyd--Max K8. Its SDK execution time is about 52\% lower in a single AR128 probe using the same input (Fig.~\ref{fig:codec-costs}).
