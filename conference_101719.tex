@@ -7,6 +7,9 @@
 % Source branch: exp/structured-k8-lm8-repeat.
 % Matched PPL follow-up: b438a098c6025df1e6928fd2c504381dcffef448.
 % Retained repeated timings: 565acc7b11076a1635fce7e076eb8cb9b4a27317.
+% NIAH: exp/structured-k8-niah at 176013543, completed report_8k.
+% Answer-code extraction results and provenance: figures/kv_cache_niah_extraction*.
+% NIAH cell counts and heatmap: figures/kv_cache_niah_heatmap*.
 % PPL: one teacher-forced pass/window/configuration on four REUSED reference
 % windows (4092 targets/configuration); no new independent held-out evaluation.
 % Performance: ten warmed measured sessions/configuration, kept separate.
@@ -47,8 +50,7 @@ dongkun@skku.edu}
 \maketitle
 
 \begin{abstract}
-Key--value (KV) cache quantization reduces storage, but encoding and decoding overhead can limit its benefits on mobile neural processing units. We present a hardware-oriented implementation of Structured K8, a two-region piecewise-uniform 8-bit key quantizer with arithmetic indexing and lookup-free Hexagon Vector eXtensions (HVX) decoding. We integrate it into a mixed-precision KV cache and compare it with Lloyd--Max under matched storage budgets with Odd and Boundary layer placements. We evaluate Qwen3-1.7B (W4A16) on a Galaxy S26 Ultra at a context capacity of 1024 tokens. Across ten warmed runs per configuration, Structured K8 reduces mean time to first token by 31.12--32.62\% and increases mean autoregressive decoding throughput by 13.61--14.41\%. On four reused WikiText-2 reference windows, perplexity is 1.81\% higher under Odd placement and 0.45\% lower under Boundary placement. A separate four-document held-out comparison yields 11.28\%
- lower perplexity than a uniform quantizer, with similar observed throughput. These results demonstrate reduced codec overhead with placement-dependent quality in the evaluated mobile setting.
+Key--value (KV) cache quantization reduces storage, but encoding and decoding overhead can limit its benefits on mobile neural processing units. We present a hardware-oriented implementation of Structured K8, a two-region piecewise-uniform 8-bit key quantizer with arithmetic indexing and lookup-free Hexagon Vector eXtensions (HVX) decoding. We integrate it into a mixed-precision KV cache and compare it with Lloyd--Max under matched storage budgets with Odd and Boundary layer placements. We evaluate Qwen3-1.7B (W4A16) on a Galaxy S26 Ultra. Across ten warmed runs per configuration at a context capacity of 1024 tokens, Structured K8 reduces mean time to first token by 31.12--32.62\% and increases mean autoregressive decoding throughput by 13.61--14.41\%. On four reused WikiText-2 reference windows, perplexity is 1.81\% higher under Odd placement and 0.45\% lower under Boundary placement. A separate four-document held-out comparison yields 11.28\% lower perplexity than a uniform quantizer, with similar observed throughput. Needle-in-a-Haystack retrieval at 1K--8K capacities yields 93.5\% answer-code extraction accuracy for Boundary Structured K8, versus 95.5\% for Boundary Lloyd--Max K8 and 81.0\% for K4/V4. These results demonstrate reduced codec overhead with placement-dependent quality in the evaluated mobile setting.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -136,11 +138,13 @@ For negative values, the magnitude index is reflected to preserve compatibility 
 The native HVX decoder recovers $r$ and $k$ from each stored byte and reconstructs $a_r+k\Delta_r$ using separate FP16 multiply and add operations. It then applies the sign and the effective FP16 scale used for norm correction, producing FP16 tiles for the existing attention path. Vectorized decoding avoids level-table loads and per-coordinate scalar loops. The coefficient payload is four FP16 values (8 bytes), replacing a 256-entry FP16 codebook (512 bytes).
 
 \section{Experimental Methodology}
-Experiments use Qwen3-1.7B~\cite{qwen3} (W4A16) on a Galaxy S26 Ultra (SM8850), with QAIRT 2.48.0.260626 and the HTP backend in burst mode. Inference uses a single sequence and context capacity of 1024. Structured K8 and Lloyd--Max K8 are compared under matched masks in Odd and Boundary placement. Weights, activation encodings, rotations, norm correction, and K4/V2 paths remain fixed. The quantized Johnson--Lindenstrauss (QJL) residual stage is disabled, so the evaluated codec is not the full TurboQuant construction~\cite{turboquant}.
+Experiments use Qwen3-1.7B~\cite{qwen3} (W4A16) on a Galaxy S26 Ultra (SM8850), with QAIRT 2.48.0.260626 and the HTP backend in burst mode. Inference uses a single sequence; performance and PPL evaluations use a context capacity of 1024. Structured K8 and Lloyd--Max K8 are compared under matched masks in Odd and Boundary placement. Weights, activation encodings, rotations, norm correction, and K4/V2 paths remain fixed. The quantized Johnson--Lindenstrauss (QJL) residual stage is disabled, so the evaluated codec is not the full TurboQuant construction~\cite{turboquant}.
 
 Performance uses 897 prompt tokens and 128 generated tokens. Each invocation includes a full warm-up, a cache reset, and a measured session. TTFT excludes model loading; decode throughput is 127 divided by the total duration of the post-prefill autoregressive steps. Each configuration has ten measured sessions in counterbalanced order, with a ten-second pause between invocations. We report means and sample standard deviations, with improvements computed from group means. End-to-end timing excludes detailed profiling.
 
 Quality is evaluated by teacher-forced perplexity on four reused WikiText-2~\cite{wikitext} reference windows of 1024 tokens, using the unchanged performance binaries. Each window is scored once per configuration, totaling 4092 target tokens per configuration. Aggregate perplexity is the exponential of the token-averaged negative log-likelihood (NLL) across all four windows. These windows are neither an independent held-out test nor a full-corpus evaluation. Earlier Lloyd--Max and uniform held-out results use different document sets and are reported separately; their absolute PPL values are not directly comparable across sets. No matched Boundary held-out comparison is available. The three-run uniform timings and other supporting experiments are not pooled with the repeated Lloyd--Max measurements.
+
+Needle-in-a-Haystack (NIAH) retrieval uses ten fixed WikiText-2 backgrounds containing a six-digit target code, five insertion depths (0, 25, 50, 75, and 100\%), and context capacities of 1K, 2K, 4K, and 8K tokens (1K = 1024). Each configuration has 200 prompts, each decoded once using non-thinking greedy generation. Prompts fit within capacity minus 64 tokens, reserving up to 64 output tokens. Accuracy requires exactly one standalone six-digit code matching the target. We compare FP16 KV/attention, TurboQuant K4/V4, and the two Boundary K8/K4 with V2 configurations.
 
 \section{Results and Analysis}
 \subsection{End-to-End Performance and Quality}
@@ -177,6 +181,16 @@ Structured & 23.61 & \textbf{20.17} & 14.58\\
 
 On the four reused reference windows (Table~\ref{tab:lm-ppl}), Boundary lowers PPL by 12.65\% for Lloyd--Max and 14.58\% for Structured relative to Odd. Structured's PPL is 1.81\% higher than Lloyd--Max under Odd and 0.45\% lower under Boundary. Lloyd--Max wins three Odd windows; each codec wins two Boundary windows.
 
+\subsection{Needle-in-a-Haystack Retrieval}
+Figure~\ref{fig:niah} reports answer-code extraction accuracy. Boundary Structured K8 achieves 93.5\% overall, compared with 95.5\% for Boundary Lloyd--Max K8 and 81.0\% for TurboQuant K4/V4.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/kv_cache_niah_heatmap.pdf}
+\caption{NIAH answer-code extraction accuracy of Qwen3-1.7B across context capacities and needle depths (10 cases per cell). The three quantized configurations share the same KV cache storage budget at each context capacity.}
+\label{fig:niah}
+\end{figure*}
+
 \subsection{Comparison with Uniform Quantization}
 The uniform baseline uses a symmetric 256-level grid with one spacing fitted under the same Gaussian model, without KV- or PPL-based tuning, and frozen to FP16. Both variants use arithmetic HVX decoders and the same Odd placement, allowing a comparison of single- and two-region quantization under matched deployment settings.
 
@@ -201,10 +215,9 @@ The Structured LUT and arithmetic decoders use identical codes, scales, and reco
 \label{fig:codec-costs}
 \end{figure}
 
-\FloatBarrier
 \section{Conclusion}
 
-Structured K8 uses two-region reconstruction levels to simplify arithmetic indexing and HVX decoding for mobile KV caching. Under Odd and Boundary placement, it reduces mean TTFT by approximately 31--33\% and increases mean decode throughput by about 14\% relative to Lloyd--Max K8. PPL ordering depends on placement within the evaluated reference windows. Future work should extend evaluation to larger independent datasets, additional models and devices, and longer-context workloads.
+Structured K8 uses two-region reconstruction levels to simplify arithmetic indexing and HVX decoding for mobile KV caching. Under Odd and Boundary placement, it reduces mean TTFT by approximately 31--33\% and increases mean decode throughput by about 14\% relative to Lloyd--Max K8. PPL ordering depends on placement within the evaluated reference windows. NIAH retrieval at 1K--8K capacities yields 93.5\% answer-code extraction accuracy under Boundary placement. Future work should extend evaluation to larger independent datasets, additional models and devices, and broader long-context tasks.
 
 \begin{thebibliography}{00}
 \bibitem{kivi} Z. Liu \emph{et al.}, ``KIVI: A tuning-free asymmetric 2bit quantization for KV cache,'' arXiv:2402.02750, 2024.

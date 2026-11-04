@@ -1,0 +1,28 @@
+{
+  "branch": "exp/structured-k8-niah",
+  "commit": "176013543",
+  "metric": "Answer-code extraction accuracy",
+  "definition": "Exactly one standalone six-digit code in the generated continuation, matching the target; leading zeros retained.",
+  "source_root": "/mnt/d/ai-hub-models/binaries/turboquant/niah_20261102",
+  "sources_sha256": {
+    "report_8k/summary.json": "3ed3bdc025b708ceefe87af4562f2a5e8956ec8495b38e2cfd5b1e837731267d",
+    "report_8k/cases.csv": "bbba7393ba7c14055abdb9498ad72017ef2ba62c13674bdd79d2ec2622ec098d",
+    "scope_8k_20261103/selected_manifest.json": "fa0d97769755cb90edb4b9bd0a151743368f7c27647a116bb58afb319436ab79"
+  },
+  "capacities_tokens": [
+    1024,
+    2048,
+    4096,
+    8192
+  ],
+  "depths_percent": [
+    0,
+    25,
+    50,
+    75,
+    100
+  ],
+  "cases_per_capacity_per_profile": 50,
+  "cases_per_profile": 200,
+  "total_cases": 800
+}

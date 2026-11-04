@@ -1,0 +1,21 @@
+configuration,group,capacity_tokens,correct,total,accuracy_pct
+FP16 KV/attention,fp16,1024,50,50,100.0
+FP16 KV/attention,fp16,2048,50,50,100.0
+FP16 KV/attention,fp16,4096,50,50,100.0
+FP16 KV/attention,fp16,8192,49,50,98.0
+FP16 KV/attention,fp16,overall,199,200,99.5
+TurboQuant K4/V4,k4_v4,1024,42,50,84.0
+TurboQuant K4/V4,k4_v4,2048,38,50,76.0
+TurboQuant K4/V4,k4_v4,4096,40,50,80.0
+TurboQuant K4/V4,k4_v4,8192,42,50,84.0
+TurboQuant K4/V4,k4_v4,overall,162,200,81.0
+Boundary Lloyd–Max,boundary_lm,1024,47,50,94.0
+Boundary Lloyd–Max,boundary_lm,2048,50,50,100.0
+Boundary Lloyd–Max,boundary_lm,4096,49,50,98.0
+Boundary Lloyd–Max,boundary_lm,8192,45,50,90.0
+Boundary Lloyd–Max,boundary_lm,overall,191,200,95.5
+Boundary Structured,boundary_structured,1024,48,50,96.0
+Boundary Structured,boundary_structured,2048,48,50,96.0
+Boundary Structured,boundary_structured,4096,47,50,94.0
+Boundary Structured,boundary_structured,8192,44,50,88.0
+Boundary Structured,boundary_structured,overall,187,200,93.5
