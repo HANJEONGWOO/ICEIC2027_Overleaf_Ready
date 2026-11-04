@@ -1,0 +1,11 @@
+metric,unit,method,value,sample_sd,measured_runs
+TTFT,ms,Uniform K8,536.446,7.752,3
+TTFT,ms,Structured K8,539.084,5.060,3
+Prefill,tokens/s,Uniform K8,1675.256,23.938,3
+Prefill,tokens/s,Structured K8,1666.834,15.706,3
+Decode,tokens/s,Uniform K8,37.1770,0.0241,3
+Decode,tokens/s,Structured K8,37.1122,0.0568,3
+Held-out PPL,,Uniform K8,37.61540782,,
+Held-out PPL,,Structured K8,33.37100346,,
+Reference PPL,,Uniform K8,23.79389464,,
+Reference PPL,,Structured K8,23.61218745,,

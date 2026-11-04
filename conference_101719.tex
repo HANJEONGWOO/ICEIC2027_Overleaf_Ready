@@ -181,25 +181,14 @@ On the four reused reference windows in Table~\ref{tab:lm-ppl}, Structured has 1
 \subsection{Comparison with Uniform Quantization}
 The uniform baseline uses a symmetric 256-level grid with one spacing fitted under the same Gaussian model, without KV- or PPL-based tuning, and frozen to FP16. Both variants use arithmetic HVX decoders and the same Odd placement, allowing a comparison of single- and two-region quantization under matched deployment settings.
 
-\begin{table}[t]
-\caption{Uniform versus Structured K8 with fixed Odd placement. Timing is mean $\pm$ sample SD over three crossed runs. Held-out set B differs from the earlier Lloyd--Max held-out set A.}
-\label{tab:uniform}
+\begin{figure}[t]
 \centering
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{@{}lrr@{}}
-\toprule
-Metric & Uniform & Structured\\
-\midrule
-Reference PPL & 23.7939 & 23.6122\\
-Held-out PPL (B) & 37.6154 & 33.3710\\
-TTFT (ms) & $536.446\pm7.752$ & $539.084\pm5.060$\\
-Prefill (tokens/s) & $1675.3\pm23.9$ & $1666.8\pm15.7$\\
-Decode (tokens/s) & $37.177\pm0.024$ & $37.112\pm0.057$\\
-\bottomrule
-\end{tabular}
-\end{table}
+\includegraphics[width=\columnwidth]{figures/kv_cache_uniform_comparison.pdf}
+\caption{Odd-placement performance and held-out PPL (set B). Timing: mean $\pm$ sample SD over three runs per configuration, with 897 prompt and 128 generated tokens. Percentages show changes from Uniform K8.}
+\label{fig:uniform}
+\end{figure}
 
-In Table~\ref{tab:uniform}, Structured reduces PPL by 11.28\% on the separate four-document held-out set B. The three-run timings have small differences and overlapping ranges, providing no clear speed advantage for either variant. Structured improves NLL on three documents, but one accounts for 79.65\% of the net gain. The quality benefit is therefore limited evidence from this small set.
+In Fig.~\ref{fig:uniform}, Structured reduces PPL by 11.28\% on the separate four-document held-out set B. The three-run timings have small differences and overlapping ranges, providing no clear speed advantage for either variant. Structured improves NLL on three documents, but one accounts for 79.65\% of the net gain. The quality benefit is therefore limited evidence from this small set. Reference-window PPL is 23.7939 for Uniform and 23.6122 for Structured.
 
 \subsection{Encoder and Decoder Analysis}
 The standalone Structured K8 encoder has 76 ONNX nodes, compared with 837 in the inherited Lloyd--Max K8 encoder, mainly through simpler scalar indexing and level/scale reconstruction. In the single AR128 probe using the same captured layer-0 input (Table~\ref{tab:encoder}), SDK execute time decreases from 3187 to 1523~$\mu$s. These observations support the reduced implementation cost.
