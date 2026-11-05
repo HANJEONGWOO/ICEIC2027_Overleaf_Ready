@@ -29,6 +29,9 @@ BLUE = '#3766BD'
 GREEN = '#367F68'
 BLUE_PALE = '#EDF3FB'
 GREEN_PALE = '#EEF5F1'
+COARSE = '#B87542'
+FINE_FILL = '#C9DCF5'
+COARSE_FILL = '#F1D8C2'
 LINE = '#CFD6DE'
 GRAY = '#8F9BA7'
 SCENE = {'width': W, 'height': H, 'font': 'Arial', 'shapes': []}
@@ -110,23 +113,23 @@ text(0,475,288,21,'One matrix per KV head',15,SECONDARY,align='center')
 
 # 2. Group exact layer ranges without pretending a group is a single layer.
 text(321,49,283,23,'28-layer Qwen3-1.7B',16,SECONDARY,align='center')
-for top, layers, precision, color, pale in (
-    (96,'Layers 1–7','K8 / V2',BLUE,BLUE_PALE),
-    (221,'Layers 8–21','K4 / V2',SECONDARY,'#F3F5F7'),
-    (346,'Layers 22–28','K8 / V2',BLUE,BLUE_PALE),
+for top, layers, precision, color, pale, border, cell in (
+    (96,'Layers 1–7','K8 / V2',BLUE,'#DCE8F8','#9EB6D8','#EDF3FC'),
+    (221,'Layers 8–21','K4 / V2',SECONDARY,'#E3E8EF','#ACB8C8','#F1F4F8'),
+    (346,'Layers 22–28','K8 / V2',BLUE,'#DCE8F8','#9EB6D8','#EDF3FC'),
 ):
-    rect(339,top,247,100,pale,LINE,1)
+    rect(339,top,247,100,pale,border,1.1)
     rect(339,top,4,100,color)
     text(350,top+6,225,26,layers,18,bold=True,align='center')
-    rect(353,top+38,144,25,'#FFFFFF',LINE,.8)
-    rect(502,top+38,70,25,'#FFFFFF',LINE,.8)
+    rect(353,top+38,144,25,cell,border,.8)
+    rect(502,top+38,70,25,cell,border,.8)
     text(353,top+38,144,25,'Self-attention',15,align='center')
     text(502,top+38,70,25,'FFN',15,align='center')
     # Explicit K output ports make the per-layer codec choice visible.
     # V2 is fixed independently of the K4/K8 assignment.
     text(353,top+70,135,25,'Values: V2',15,GREEN)
-    rect(510,top+70,62,25,'#FFFFFF',color,1)
-    text(510,top+70,62,25,precision.split(' / ')[0],19,color,True,'center')
+    rect(510,top+70,62,25,color,color,1)
+    text(510,top+70,62,25,precision.split(' / ')[0],19,'#FFFFFF',True,'center')
 for a,b in ((199,216),(324,341)): arrow(462.5,a,462.5,b,GRAY,1.5,5)
 text(321,463,283,22,'K8: 14 layers  ·  K4: 14 layers',15.5,align='center')
 text(321,484,283,16,'V2 in every layer',14,SECONDARY,align='center')
@@ -153,7 +156,7 @@ line([[648,62],[675,62]],INK,1.7)
 text(681,49,145,25,'Gaussian model',14,SECONDARY)
 line([[835,62],[862,62]],GRAY,1.3,True)
 text(868,49,125,25,'KV samples',14,SECONDARY)
-circle(1025,62,2.5,BLUE)
+circle(1025,62,3.5,BLUE)
 text(1036,49,155,25,'Reconstruction levels',14,SECONDARY)
 
 SCALE = math.sqrt(LEVELS['distribution']['d'])
@@ -164,19 +167,34 @@ tau = LEVELS['pu_k8']['tau']
 tau_z = tau*SCALE
 
 def quantizer(top, height, title, count, level_key, sample_key, color, baseline, peak,
-              action, proposed=False):
+              proposed=False):
     rect(638,top,562,height,'#FFFFFF',LINE,1)
     rect(638,top,562,30,BLUE_PALE if proposed else '#F3F5F7')
     if proposed: rect(638,top,4,height,BLUE)
     text(650,top+2,395,27,title,18.5,color if proposed else INK,True)
     text(1053,top+2,133,27,f'{count} levels',14.5,SECONDARY,align='right')
-    x0,x1=656,1007
+    # Use the former explanation-column space for a common, wider plot axis.
+    x0,x1=656,1173
     def xp(z): return x0+(z+4.5)/9*(x1-x0)
     def yp(p): return baseline-p/.42*peak
     zs=np.linspace(-4.5,4.5,181)
     model=np.exp(-zs*zs/2)/math.sqrt(2*math.pi)
-    polygon([[xp(-4.5),baseline]]+[[xp(float(z)),yp(float(p))] for z,p in zip(zs,model)]+[[xp(4.5),baseline]],
-            BLUE_PALE if color==BLUE else GREEN_PALE)
+    if proposed:
+        # Two magnitude regions: the symmetric tails share the coarse spacing.
+        # Keep boundary coordinates exact when splitting the Gaussian fill.
+        for lo,hi,fill,tint in ((-4.5,-tau_z,COARSE_FILL,'#FBF4EE'),
+                               (-tau_z,tau_z,FINE_FILL,'#F0F5FC'),
+                               (tau_z,4.5,COARSE_FILL,'#FBF4EE')):
+            rect(xp(lo),top+53,xp(hi)-xp(lo),baseline-(top+53),tint)
+            region_z=np.r_[lo,zs[(zs>lo)&(zs<hi)],hi]
+            region_p=np.exp(-region_z*region_z/2)/math.sqrt(2*math.pi)
+            polygon([[xp(lo),baseline]]+
+                    [[xp(float(z)),yp(float(p))] for z,p in zip(region_z,region_p)]+
+                    [[xp(hi),baseline]],fill)
+    else:
+        polygon([[xp(-4.5),baseline]]+
+                [[xp(float(z)),yp(float(p))] for z,p in zip(zs,model)]+
+                [[xp(4.5),baseline]],'#D9E6F8' if color==BLUE else '#DCEDE4')
     group=DENSITY['groups'][sample_key]
     density=group.get('density',group.get('density_per_bin'))
     if density is None: raise KeyError(f'No density found: {list(group)}')
@@ -188,39 +206,33 @@ def quantizer(top, height, title, count, level_key, sample_key, color, baseline,
     actual=np.array(LEVELS[level_key]['levels_fp16'])*SCALE
     assert len(actual)==count and np.all(np.diff(actual)>0)
     if proposed:
-        # Every one of the 256 levels is rendered: no decorative subsampling.
+        for z in (-tau_z,tau_z):
+            line([[xp(z),top+53],[xp(z),baseline+6]],'#A2ADBD',.85,True)
+        # Draw every exact level. Taller, heavier ticks remain distinguishable
+        # where oversized circular markers would merge in the dense region.
         for z in actual:
             inner=abs(z)<tau_z
-            line([[xp(float(z)),baseline-3.7],[xp(float(z)),baseline+4.5]],BLUE if inner else '#6E85A5',.55)
-        for z in (-tau_z,tau_z):
-            line([[xp(z),top+53],[xp(z),baseline+6]],'#94A6BE',.8,True)
+            line([[xp(float(z)),baseline-5],[xp(float(z)),baseline+5.5]],
+                 BLUE if inner else COARSE,.9)
         left, right=xp(-tau_z),xp(tau_z)
         for l,r,label in ((x0,left,'Coarse'),(left,right,'Fine'),(right,x1,'Coarse')):
-            text(l,top+32,r-l,23,label,13.5,BLUE if label=='Fine' else SECONDARY,
-                 label=='Fine','center')
-        text(x0,baseline+22,x1-x0,19,'Two spacings: Δ₀ < Δ₁',14,SECONDARY,align='center')
+            text(l,top+32,r-l,23,label,14,BLUE if label=='Fine' else COARSE,
+                 True,'center')
+        text(x0,baseline+25,x1-x0,19,'Two spacings: Δ₀ < Δ₁',14,SECONDARY,align='center')
     else:
-        for z in actual: circle(xp(float(z)),baseline,2.5,color,'#FFFFFF',.45)
+        for z in actual: circle(xp(float(z)),baseline,3.5,color,'#FFFFFF',.55)
     for z in (-4,0,4):
         line([[xp(z),baseline+1],[xp(z),baseline+4]],SECONDARY,.6)
-        text(xp(z)-13,baseline+5,26,16,str(z).replace('-','−'),12.5,SECONDARY,align='center')
+        text(xp(z)-13,baseline+(8 if proposed else 5),26,16,
+             str(z).replace('-','−'),12.5,SECONDARY,align='center')
     text(x1+7,baseline+1,16,18,'z',14,SECONDARY,italic=True)
-    ybox=top+42
-    rect(1033,ybox,152,62,'#F7F9FB',LINE,.8)
-    text(1038,ybox+4,142,54,action,16,align='center')
-    if proposed:
-        text(1029,top+112,161,26,'ℓ⁺ = aᵣ + kΔᵣ',20,BLUE,align='center')
-        text(1029,top+140,161,16,'Arithmetic reconstruction',12.5,SECONDARY,align='center')
 
-quantizer(82,120,'K4 · Lloyd–Max',16,'lloyd_max_k4','key_k4_middle',BLUE,177,48,
-          'Threshold indexing\n+ level lookup')
+quantizer(82,120,'K4 · Lloyd–Max',16,'lloyd_max_k4','key_k4_middle',BLUE,177,48)
 quantizer(213,162,'K8 · PU-K8 (ours)',256,'pu_k8','key_k8_boundary',BLUE,326,54,
-          'Arithmetic indexing\n+ HVX decoding',True)
-quantizer(386,114,'V2 · Lloyd–Max',4,'lloyd_max_v2','value_all',GREEN,477,44,
-          'Threshold indexing\n+ level lookup')
+          proposed=True)
+quantizer(386,114,'V2 · Lloyd–Max',4,'lloyd_max_v2','value_all',GREEN,477,44)
 
-# Translate stage 3 as one unit: plotted distributions, level spacing, labels,
-# and all internal proportions remain unchanged.
+# Translate stage 3 as one unit while preserving the dedicated routing channel.
 for shape in SCENE['shapes'][stage3_shape_start:]:
     if 'x' in shape:
         shape['x'] += QUANTIZER_OFFSET
@@ -264,6 +276,9 @@ def render():
         if ext=='pdf': metadata.update(CreationDate=None,ModDate=None)
         if ext=='svg': metadata={'Date':None,'Creator':'Native editable vector diagram'}
         fig.savefig(HERE/f'kv_cache_overview.{ext}',dpi=400,metadata=metadata)
+        if ext=='svg':
+            path=HERE/'kv_cache_overview.svg'
+            path.write_text('\n'.join(row.rstrip() for row in path.read_text().splitlines())+'\n')
     plt.close(fig)
     write_pptx(SCENE,HERE/'kv_cache_overview.pptx')
     print('Created overview PDF / SVG / PNG / editable PPTX; exact levels: 16 / 256 / 4.')

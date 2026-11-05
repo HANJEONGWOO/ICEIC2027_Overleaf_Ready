@@ -19,7 +19,15 @@ Visual design:
   A white break at the single route crossover indicates no junction. Only
   the true K8 merge has a dot. These depict fixed per-layer codec selection.
   A dedicated routing channel replaces the old generic stage-2→3 arrow;
-  all distribution shapes and level positions retain their proportions.
+  K8 layer groups have blue fills and K4 groups have slate fills, with solid
+  precision badges and matching outlines. Both K8 groups retain the same color.
+  The right-hand indexing/decoding boxes are removed to widen all three plots
+  from 351 to 517 scene units, preserving their shared standardized x axis.
+  K4/V2 reconstruction dots are larger. PU-K8 uses taller, heavier ticks so
+  all 256 levels remain visible without merging oversized circular markers.
+  PU-K8's central fine region is blue; both coarse tails share an orange hue.
+  Gaussian fills, region tints, labels and ticks use the same region colors.
+  K4/V2 curves have blue/green fills; curves and level marks stay above fills.
 
 Data:
   kv_cache_overview_levels.json stores all 16/256/4 actual FP16 decoder levels,
