@@ -4,10 +4,12 @@
 Run: python figures/plot_kv_cache_codec_costs.py
 Requires: matplotlib and the Lato font family. No experiments are run.
 Source: ai-hub-models/scripts/llm/turboquant/README.md, "Isolated codec costs".
+Exact reports and input/profile hashes: kv_cache_codec_costs_sources.txt.
 The CSV retains the timing and encoder named-op measurements used in the paper.
 Encoder: one instrumented AR128 probe on the same captured layer-0 K input.
-Decoder: one 256-token invocation, comparing PU-K8 LUT control with
-PU-K8 arithmetic using identical codes, scales, and reconstruction levels.
+Decoder: one 256-token invocation, comparing Lloyd-Max K8 LUT with PU-K8
+arithmetic using identical input codes and scales. Reconstruction levels differ;
+each decoder matches its own FP16 reference bit-exactly.
 These are different probes, not additive components of end-to-end latency.
 No repeated-run SD is available. Execution-time panels share a zero-based scale.
 Only the printed relative changes are rounded; raw integer values are retained.
@@ -34,7 +36,7 @@ SECONDARY = "#66717E"
 ACCENT_TEXT = "#244A8A"
 METHODS = {
     "Encoder": ("Lloyd–Max K8", "PU-K8"),
-    "Decoder": ("PU-K8 LUT control", "PU-K8 arithmetic"),
+    "Decoder": ("Lloyd–Max K8", "PU-K8"),
 }
 
 with (HERE / "kv_cache_codec_costs.csv").open(newline="", encoding="utf-8") as stream:
@@ -60,8 +62,7 @@ plt.rcParams.update({
 figure_height = 2.10
 fig = plt.figure(figsize=(3.45, figure_height))
 
-# The comparisons use different baselines. Keep separate method legends,
-# and label the component directly above each execution-time panel.
+# Repeat the method legend and identify the component above each panel.
 for center, labels in (
     (0.25, ("Lloyd–Max K8", "PU-K8 (ours)")),
     (0.75, ("Lloyd–Max K8", "PU-K8 (ours)")),

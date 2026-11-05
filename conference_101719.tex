@@ -25,15 +25,20 @@
 \usepackage{cite}
 \usepackage{amsmath,amssymb}
 \usepackage{graphicx}
+\usepackage{microtype}
+\usepackage{needspace}
 \usepackage{booktabs}
 \usepackage{url}
 \usepackage{placeins}
 \usepackage[checkfloat]{flushend}
+% Keep figures near their discussion without large float-to-text gaps.
+\setlength{\textfloatsep}{10pt plus 2pt minus 2pt}
+\setlength{\dbltextfloatsep}{8pt plus 2pt minus 2pt}
 \newcommand{\clip}{\operatorname{clip}}
 \hyphenation{quan-ti-za-tion de-quan-ti-za-tion code-book}
 
 \begin{document}
-\title{Bit-Width-Aware KV Cache Quantization for Mobile NPUs}
+\title{Bit-Width-Aware KV Cache Quantization\\for Mobile NPUs}
 % Author order and affiliations supplied by the authors.
 \author{\IEEEauthorblockN{Jeongwoo Han}
 \IEEEauthorblockA{Department of Digital Media\\
@@ -50,7 +55,7 @@ dongkun@skku.edu}
 \maketitle
 
 \begin{abstract}
-Key--value (KV) cache quantization reduces storage, but encoding and decoding overhead can limit its benefits on mobile neural processing units. We present a bit-width-aware design that retains Lloyd--Max for K4/V2 and uses Piecewise-Uniform K8 (PU-K8) for eight-bit keys. PU-K8 combines two-region reconstruction levels with arithmetic indexing and lookup-free Hexagon Vector eXtensions (HVX) decoding. We compare it with Lloyd--Max K8 under matched storage budgets and Odd and Boundary layer placements. We evaluate Qwen3-1.7B (W4A16) on a Galaxy S26 Ultra. Across ten warmed runs per configuration at a context capacity of 1024 tokens, PU-K8 reduces mean time to first token by 31.12--32.62\% and increases mean autoregressive decoding throughput by 13.61--14.41\%. On four reused WikiText-2 reference windows, perplexity is 1.81\% higher under Odd placement and 0.45\% lower under Boundary placement. A separate four-document held-out comparison yields 11.28\% lower perplexity than a uniform quantizer, with similar observed throughput. Needle-in-a-Haystack retrieval at 1K--8K capacities yields 93.5\% answer-code extraction accuracy for Boundary PU-K8, versus 95.5\% for Boundary Lloyd--Max K8 and 81.0\% for K4/V4. These results demonstrate reduced codec overhead with placement-dependent quality in the evaluated mobile setting.
+Key--value (KV) cache quantization reduces storage, but encoding and decoding overhead can limit its benefits on mobile neural processing units. We present a bit-width-aware design that retains Lloyd--Max for K4/V2 and uses Piecewise-Uniform K8 (PU-K8) for eight-bit keys. PU-K8 combines two-region reconstruction levels with arithmetic indexing and lookup-free Hexagon Vector eXtensions (HVX) decoding. We compare it with Lloyd--Max K8 under matched storage budgets and Odd and Boundary layer placements. We evaluate Qwen3-1.7B (W4A16) on a Galaxy S26 Ultra. Across ten warmed runs per configuration at a context capacity of 1024 tokens, PU-K8 reduces mean time to first token (TTFT) by 31.12--32.62\% and increases mean autoregressive decoding throughput by 13.61--14.41\%. On four reused WikiText-2 reference windows, perplexity (PPL) is 1.81\% higher under Odd placement and 0.45\% lower under Boundary placement. A separate four-document held-out comparison yields 11.28\% lower perplexity than a uniform quantizer, with similar observed throughput. Needle-in-a-Haystack retrieval at 1K--8K capacities yields 93.5\% answer-code extraction accuracy for Boundary PU-K8, versus 95.5\% for Boundary Lloyd--Max K8 and 81.0\% for K4/V4. These results demonstrate reduced codec overhead with placement-dependent quality in the evaluated mobile setting.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -60,7 +65,7 @@ KV cache, quantization, mobile NPU, piecewise-uniform quantization, Hexagon HVX
 \section{Introduction}
 Key--value (KV) cache quantization reduces storage and data movement, but encoding and decoding overhead can limit its benefits for mobile inference. KIVI motivates asymmetric key/value quantization~\cite{kivi}, while TurboQuant explores rotation-based scalar quantization~\cite{turboquant}. Practical deployment therefore requires evaluating codec costs alongside quantization error.
 
-Our work builds on a TurboQuant implementation in the Qualcomm AI Hub Models pipeline. Its inherited Lloyd--Max encoder uses comparison trees and reconstruction-level selection subgraphs, while LUT-based decoding requires table lookup and layout conversion. We investigate whether piecewise-uniform reconstruction levels can simplify both paths while maintaining useful language-model quality.
+Our work builds on a TurboQuant implementation in the Qualcomm AI Hub Models pipeline. Its inherited Lloyd--Max encoder uses comparison trees and reconstruction-level selection subgraphs, while lookup-table (LUT) decoding requires table lookup and layout conversion. We investigate whether piecewise-uniform reconstruction levels can simplify both paths while maintaining useful language-model quality.
 
 We present a bit-width-aware KV cache design that retains Lloyd--Max for K4/V2 and uses Piecewise-Uniform K8 (PU-K8) for eight-bit keys. Building on piecewise quantization approaches such as PWLQ~\cite{pwlq} and PTQ4ViT~\cite{ptq4vit}, PU-K8 uses two-region reconstruction levels for arithmetic indexing and HVX decoding. Our contribution is this hardware-oriented implementation for a rotated mixed-precision KV cache, preserving the existing byte format and explicit FP16 rounding, together with controlled on-device comparisons against Lloyd--Max K8 and a single-spacing uniform baseline. Figure~\ref{fig:overview} summarizes the overall design.
 
@@ -87,6 +92,8 @@ KV quantization sensitivity varies across layers~\cite{kvtuner}, motivating high
 \subsection{Packing and Scalar-Index Costs}
 Two- and four-bit codes divide a byte evenly, whereas eight-bit codes use direct byte storage. Three-, five-, six-, and seven-bit codes may cross byte boundaries and need fragment assembly. Separately, the inherited Lloyd--Max encoder incurs bit-width-dependent comparison-tree and reconstruction-level selection costs. PU-K8 uses byte storage and arithmetic indexing and decoding; K4/V2 retain packing overhead. Thus, nominal bit width alone does not determine execution cost.
 
+% Start the method overview with enough room below its two-column figure.
+\Needspace{12\baselineskip}
 \section{Bit-Width-Aware Quantization}
 \label{sec:method}
 \subsection{Overview}
@@ -107,7 +114,7 @@ The proposed key cache uses Lloyd--Max K4 and PU-K8. For bit width $p$, the posi
 \end{equation}
 For K4, $\mathcal{L}_4^+$ contains eight positive Lloyd--Max levels indexed by $j\in\{0,\ldots,7\}$; the threshold-based encoder is retained. For K8, $j=64r+k$, with region $r\in\{0,1\}$, local index $k\in\{0,\ldots,63\}$, offset $a_r$, and spacing $\Delta_r$. Negative levels follow by sign reflection. The K8 expression describes the grid before rounding; its multiplication and addition are separately rounded to FP16.
 
-The four coefficients are fitted offline to minimize scalar MSE under the Gaussian approximation $\mathcal{N}(0,1/d)$, without KV samples or PPL-based tuning.
+The four coefficients are fitted offline to minimize scalar mean squared error (MSE) under the Gaussian approximation $\mathcal{N}(0,1/d)$, without KV samples or PPL-based tuning.
 
 \emph{Arithmetic indexing.} For a normalized, rotated coordinate $y$, let $m=|y|$. The boundary $\tau$ is the midpoint between the FP16-rounded levels at $(r,k)=(0,63)$ and $(1,0)$. Select the region as
 \begin{equation}
@@ -142,10 +149,12 @@ Experiments use Qwen3-1.7B~\cite{qwen3} (W4A16) on a Galaxy S26 Ultra (SM8850), 
 
 Performance uses 897 prompt tokens and 128 generated tokens. Each invocation includes a full warm-up, a cache reset, and a measured session. TTFT excludes model loading; decode throughput is 127 divided by the total duration of the post-prefill autoregressive steps. Each configuration has ten measured sessions in counterbalanced order, with a ten-second pause between invocations. We report means and sample standard deviations, with improvements computed from group means. End-to-end timing excludes detailed profiling.
 
-Quality is evaluated by teacher-forced perplexity on four reused WikiText-2~\cite{wikitext} reference windows of 1024 tokens, using the unchanged performance binaries. Each window is scored once per configuration, totaling 4092 target tokens per configuration. Aggregate perplexity is the exponential of the token-averaged negative log-likelihood (NLL) across all four windows. These windows are neither an independent held-out test nor a full-corpus evaluation. Earlier Lloyd--Max and uniform held-out results use different document sets and are reported separately; their absolute PPL values are not directly comparable across sets. No matched Boundary held-out comparison is available. The three-run uniform timings and other supporting experiments are not pooled with the repeated Lloyd--Max measurements.
+Quality is evaluated by teacher-forced perplexity on four reused WikiText-2~\cite{wikitext} reference windows of 1024 tokens, using the unchanged performance binaries. Each window is scored once per configuration, totaling 4092 target tokens per configuration. Aggregate perplexity is the exponential of the token-averaged negative log-likelihood (NLL) across all four windows. These windows are neither an independent held-out test nor a full-corpus evaluation. The uniform comparison uses a separate held-out document set; its absolute PPL values are not directly comparable to the reference-window results. No matched Boundary held-out comparison is available. The three-run uniform timings and other supporting experiments are not pooled with the repeated Lloyd--Max measurements.
 
 Needle-in-a-Haystack (NIAH) retrieval uses ten fixed WikiText-2 backgrounds containing a six-digit target code, five insertion depths (0, 25, 50, 75, and 100\%), and context capacities of 1K, 2K, 4K, and 8K tokens (1K = 1024). Each configuration has 200 prompts, each decoded once using non-thinking greedy generation. Prompts fit within capacity minus 64 tokens, reserving up to 64 output tokens. Accuracy requires exactly one standalone six-digit code matching the target. We compare FP16 KV/attention, TurboQuant K4/V4, and the two Boundary K8/K4 with V2 configurations.
 
+% Keep the results heading with its opening comparison.
+\Needspace{15\baselineskip}
 \section{Results and Analysis}
 \subsection{End-to-End Performance and Quality}
 We compare PU-K8 with Lloyd--Max K8, which has lower Gaussian scalar reconstruction MSE. This comparison evaluates complete implementations.
@@ -159,7 +168,7 @@ We compare PU-K8 with Lloyd--Max K8, which has lower Gaussian scalar reconstruct
 
 Under Boundary placement, Fig.~\ref{fig:performance} shows that PU-K8 reduces mean TTFT by 31.12\% and increases prefill and decode throughput by 45.22\% and 14.41\%, respectively. Separate Odd-placement runs show a 32.62\% TTFT reduction and 48.49\% and 13.61\% higher prefill and decode throughput, respectively. The speed advantage is observed under both tested masks on this device.
 
-\begin{table}[t]
+\begin{table}[!ht]
 \caption{Reference-window PPL reduction from Odd to Boundary placement.}
 \label{tab:lm-ppl}
 \centering
@@ -191,6 +200,8 @@ Figure~\ref{fig:niah} reports answer-code extraction accuracy. Boundary PU-K8 ac
 \label{fig:niah}
 \end{figure*}
 
+% Keep the uniform comparison together beside its figure.
+\Needspace{18\baselineskip}
 \subsection{Comparison with Uniform Quantization}
 The uniform baseline uses a symmetric 256-level grid with one spacing fitted under the same Gaussian model, without KV- or PPL-based tuning, and frozen to FP16. Both variants use arithmetic HVX decoders and the same Odd placement, allowing a comparison of single- and two-region quantization under matched deployment settings.
 
@@ -201,23 +212,27 @@ The uniform baseline uses a symmetric 256-level grid with one spacing fitted und
 \label{fig:uniform}
 \end{figure}
 
-In Fig.~\ref{fig:uniform}, PU-K8 reduces PPL by 11.28\% on the separate four-document. The three-run timings have small differences and overlapping ranges, providing no clear speed advantage for either variant. PU-K8 improves NLL on three documents, but one accounts for 79.65\% of the net gain. The quality benefit is therefore limited evidence from this small set. Reference-window PPL is 23.7939 for Uniform and 23.6122 for PU-K8.
+In Fig.~\ref{fig:uniform}, PU-K8 reduces PPL by 11.28\% on the separate four-document set. The three-run timings have small differences and overlapping ranges, providing no clear speed advantage for either variant. PU-K8 improves NLL on three documents, but one accounts for 79.65\% of the net gain. The quality benefit is therefore limited evidence from this small set. Reference-window PPL is 23.7939 for Uniform and 23.6122 for PU-K8.
 
 \subsection{Encoder and Decoder Analysis}
 The PU-K8 encoder simplifies scalar indexing and level/scale reconstruction, using 76 ONNX nodes versus 837 for Lloyd--Max K8. Its SDK execution time is about 52\% lower in a single AR128 probe using the same input (Fig.~\ref{fig:codec-costs}).
 
-The PU-K8 LUT and arithmetic decoders use identical codes, scales, and reconstruction levels, and both match the FP16 reference bit-exactly. In a single 256-token probe, arithmetic decoding shows only a 0.9\% lower SDK execution time.
+With identical input codes and scales, the Lloyd--Max LUT and PU-K8 arithmetic decoders each match their own FP16 reference bit-exactly. In a single 256-token probe, PU-K8 shows only a 1.4\% lower SDK execution time.
 
 \begin{figure}[!t]
 \centering
-\includegraphics[width=\columnwidth]{figures/kv_cache_codec_costs.pdf}
-\caption{Single-probe SDK execution times: AR128 encoders and 256-token PU-K8 decoders. Percentages show changes from each gray baseline.}
+% Trim only the verified empty top/bottom margins; retain all plotted content.
+\includegraphics[width=\columnwidth,trim=0 6bp 0 6bp,clip]{figures/kv_cache_codec_costs.pdf}
+\caption{Single-probe SDK execution times: AR128 encoders and 256-token decoders. Percentages show changes from each gray baseline.}
 \label{fig:codec-costs}
 \end{figure}
 
+% Keep the conclusion and references in the final column.
+\raggedend
+\newpage
 \section{Conclusion}
 
-Our bit-width-aware KV cache design retains Lloyd--Max K4/V2 and uses PU-K8 for arithmetic indexing and HVX decoding of eight-bit keys. Under Odd and Boundary placement, it reduces mean TTFT by approximately 31--33\% and increases mean decode throughput by about 14\% relative to Lloyd--Max K8. PPL ordering depends on placement within the evaluated reference windows. NIAH retrieval at 1K--8K capacities yields 93.5\% answer-code extraction accuracy under Boundary placement. Future work should extend evaluation to larger independent datasets, additional models and devices, and broader long-context tasks.
+On the evaluated mobile NPU, arithmetic PU-K8 with Lloyd--Max K4/V2 reduces mean TTFT by 31--33\% and increases decode throughput by about 14\% versus Lloyd--Max K8. Reference-window PPL depends on placement; Boundary PU-K8 achieves 93.5\% NIAH accuracy at 1K--8K capacities. Further evaluation requires larger independent datasets, additional models and devices, and broader long-context tasks.
 
 \begin{thebibliography}{00}
 \bibitem{kivi} Z. Liu \emph{et al.}, ``KIVI: A tuning-free asymmetric 2bit quantization for KV cache,'' arXiv:2402.02750, 2024.

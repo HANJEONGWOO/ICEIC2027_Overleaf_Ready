@@ -1,0 +1,58 @@
+Fig. 5 codec-cost provenance (reviewed 2026-11-05)
+
+Report root: /mnt/d/ai-hub-models/binaries/turboquant/lloyd_max_k8_convergence_20261020
+Aggregate report: codec_costs.json
+Aggregate SHA256: 536631c5c200b0ccd543a25990d291781afce6cd2e6629deefc3c7ca80bcce03
+Protocol: protocol.json; Native package: /mnt/d/ai-hub-models/binaries/turboquant/structured_k8_decoder_20261013/native
+
+Encoder rows are unchanged: LM8-Converged (Lloyd-Max K8) and Structured (PU-K8),
+one AR128 diagnostic each using the same captured layer-0 K input.
+
+Decoder comparison uses lm8_converged and structured, not structured_lut_control.
+Each is one instrumented 256-token qnn-net-run invocation, with detailed/optrace
+profiling and the same default probe power policy (not full-model burst policy).
+QAIRT build: v2.48.0.260626120635; SM8850/V81; optimization O=3.
+Packed UINT8 shape: [8, 1, 256, 128]; FP16 scales: [8, 1, 256, 1].
+The raw codes and scales are byte-identical across both decoders.
+Quantization levels and outputs differ. Each output is bit-exact to its own
+FP16 reference. These measurements do not isolate a same-codebook algorithm
+change or establish a systematic latency advantage from repeated observations.
+Encoder and decoder probe times are not additive end-to-end latency components.
+Observed decoder SDK-time change: (4429 - 4491) / 4491 = -1.3805388555%.
+
+Validated decoder reports:
+lm8_converged:
+  SDK execute: 4491 us; excluding wait: 758 us
+  Readable profile: probe_profiles/lm8_converged_256/detailed.txt (lines 57-58)
+  decoder_lm8_converged/device/out_native_t256/qnn-profiling-data_0.log
+    SHA256: c66145507006e51991c3a65a39b2e80af3aaf1ebf09a4d46fe2fa4cefd8635d6
+  decoder_lm8_converged/native_t256.bin
+    SHA256: b86361c9858e01406260449395e75d52f6e14a8c2faea1e9f0c244332cc6e2c0
+  decoder_lm8_converged/native_t256_packed.raw
+    SHA256: c90eca80615f9b9fa7d498aee57b1c2d3b4fe726232a470cd3cc7748650351f4
+  decoder_lm8_converged/native_t256_scale.raw
+    SHA256: f54951380e0be957ea17cc6def50ac08a350581ff80f49ff71ebca82d7689187
+  decoder_lm8_converged/correctness.json
+    SHA256: 99ee509c432418f1f26293343bde20c30a648967d91cd6459d3741a2731b9766
+structured:
+  SDK execute: 4429 us; excluding wait: 653 us
+  Readable profile: probe_profiles/structured_256/detailed.txt (lines 57-58)
+  decoder_structured/device/out_native_t256/qnn-profiling-data_0.log
+    SHA256: 8fd6a4b407ce795ca85dae906d707b3a68a05c09d9ff1941d76f72654a8043e0
+  decoder_structured/native_t256.bin
+    SHA256: 238f632d745fb3b052028cc20d5f9817cbd80e2c35280b6c2e92fc8a104f93a3
+  decoder_structured/native_t256_packed.raw
+    SHA256: c90eca80615f9b9fa7d498aee57b1c2d3b4fe726232a470cd3cc7748650351f4
+  decoder_structured/native_t256_scale.raw
+    SHA256: f54951380e0be957ea17cc6def50ac08a350581ff80f49ff71ebca82d7689187
+  decoder_structured/correctness.json
+    SHA256: 99ee509c432418f1f26293343bde20c30a648967d91cd6459d3741a2731b9766
+
+Harness: /home/hjw/git/ai-hub-models/scripts/llm/turboquant/probe_lm8_convergence.py
+Input generator and runner: /home/hjw/git/ai-hub-models/scripts/llm/turboquant/validate_native_decoder.py
+Reporting assertions: /home/hjw/git/ai-hub-models/scripts/llm/turboquant/summarize_lm8_convergence.py
+Summary: /home/hjw/git/ai-hub-models/scripts/llm/turboquant/README.md, Isolated codec costs
+
+Correction: the former decoder baseline 4469 us / 769 us belonged to PU-K8
+LUT control and was inconsistent with the Lloyd-Max graph legend. The figure
+now uses the existing Lloyd-Max measurements above; no new experiment was run.
