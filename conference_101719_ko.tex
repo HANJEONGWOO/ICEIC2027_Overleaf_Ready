@@ -1,6 +1,6 @@
-% English source SHA256: 19185f67db77bafcd932cf567e6aa634e6b4106450148b82e129274581eb5078
+% English source SHA256: 585f8f80051ab9d4019ff29019e6e7ab36508d9d4989f8f27893a00d34f1d607
 % Korean review translation of conference_101719.tex, 2026-11-05.
-% The English source/PDF, figure assets, equations and reported results are unchanged.
+% Translation follows the English source; figure assets, equations and results are shared.
 % Figure-internal labels, author names/department names, and bibliography remain English.
 % Build: latexmk -lualatex -interaction=nonstopmode -halt-on-error conference_101719_ko.tex
 % Requires a complete LuaLaTeX installation, Babel Korean, and Nanum fonts
@@ -144,14 +144,16 @@ K4에서 $\mathcal{L}_4^+$는 $j\in\{0,\ldots,7\}$로 인덱싱되는 양의 Llo
 네이티브 HVX 디코더는 저장된 각 바이트에서 $r$과 $k$를 추출하고, FP16 곱셈과 덧셈을 분리하여 $a_r+k\Delta_r$를 복원한다. 이후 부호와 노름 보정에 사용되는 유효 FP16 스케일을 적용하여 기존 어텐션 경로에 전달할 FP16 타일을 생성한다. 벡터화된 디코딩은 레벨 테이블 로드와 좌표별 스칼라 반복문을 제거한다. 계수 데이터는 FP16 값 4개(8바이트)로, FP16 항목 256개로 구성된 코드북(512바이트)을 대체한다.
 
 \section{실험 방법}
-실험에는 Qwen3-1.7B~\cite{qwen3}(W4A16)를 사용하였으며, Galaxy S26 Ultra(SM8850)에서 실행하였다. QAIRT 2.48.0.260626과 버스트 모드의 HTP 백엔드를 사용하였다. 추론은 단일 시퀀스로 수행하며, 성능 및 PPL 평가의 컨텍스트 용량은 1024이다. Odd와 Boundary 배치에서 동일한 레이어 마스크를 적용하여 PU-K8과 Lloyd--Max K8을 비교하였다. 가중치, 활성값 인코딩, 회전, 노름 보정 및 K4/V2 경로는 고정하였다. 양자화된 Johnson--Lindenstrauss(QJL) 잔차 단계를 비활성화하였으므로, 평가 대상 코덱은 TurboQuant의 전체 구성이 아니다~\cite{turboquant}.
+실험에는 Qwen3-1.7B~\cite{qwen3}(W4A16)를 사용하였으며, Galaxy S26 Ultra(SM8850)에서 실행하였다. QAIRT 2.48.0.260626과 버스트 모드의 HTP 백엔드를 사용하였다. 추론은 단일 시퀀스로 수행하며, 성능 및 PPL 평가의 컨텍스트 용량은 1024이다. Odd와 Boundary 배치에서 동일한 레이어 마스크를 적용하여 PU-K8과 Lloyd--Max K8을 비교하였다. 가중치, 활성값 인코딩, 회전, 노름 보정 및 K4/V2 경로는 고정하였다.
 
-성능 평가에는 프롬프트 897토큰과 생성 128토큰을 사용하였다. 각 실행은 전체 워밍업, 캐시 초기화, 측정 세션으로 구성된다. TTFT에는 모델 로딩 시간이 포함되지 않으며, 디코딩 처리량은 프리필 이후 자기회귀 단계의 총 소요 시간으로 127을 나누어 계산한다. 각 구성에서 실행 순서의 영향을 상쇄하도록 순서를 배치하여 10회의 측정 세션을 수행하였으며, 실행 사이에는 10초의 대기 시간을 두었다. 평균과 표본 표준편차를 보고하고, 개선율은 구성별 평균으로 계산하였다. 종단 간 성능 측정 시에는 상세 프로파일링을 수행하지 않았다.
+성능 평가에는 프롬프트 897토큰과 생성 128토큰을 사용하였다. 각 실행은 전체 워밍업, 캐시 초기화, 측정 세션으로 구성된다. TTFT에는 모델 로딩 시간이 포함되지 않으며, 디코딩 처리량은 프리필 이후 자기회귀 단계의 총 소요 시간으로 127을 나누어 계산한다. 각 구성에서 실행 순서의 영향을 상쇄하도록 순서를 배치하여 10회의 측정 세션을 수행하였으며, 실행 사이에는 10초의 대기 시간을 두었다. 평균과 표본 표준편차를 보고하고, 개선율은 구성별 평균으로 계산하였다.
 
-품질은 재사용한 WikiText-2~\cite{wikitext} 기준 구간 4개에 대해 교사 강제(teacher forcing) 방식으로 PPL을 평가하였다. 각 구간은 1024토큰이며, 성능 평가에 사용한 바이너리를 변경 없이 사용하였다. 각 구간을 구성별로 한 번씩 평가하여, 구성당 총 4092개의 대상 토큰을 채점하였다. 전체 PPL은 네 구간의 토큰 평균 음의 로그우도(NLL)에 지수 함수를 적용한 값이다. 이 구간들은 독립적인 홀드아웃 테스트나 전체 코퍼스 평가에 해당하지 않는다. 균일 양자화 비교에는 별도의 홀드아웃 문서 집합을 사용하므로, 해당 PPL 수치를 기준 구간 결과와 직접 비교할 수 없다. 동일 조건의 Boundary 홀드아웃 비교 결과는 없다. 균일 양자화의 3회 성능 측정과 기타 보조 실험은 Lloyd--Max 반복 측정 결과와 통합하지 않았다.
+품질은 재사용한 WikiText-2~\cite{wikitext} 기준 구간 4개에 대해 교사 강제(teacher forcing) 방식으로 PPL을 평가하였다. 각 구간은 1024토큰이며, 성능 평가에 사용한 바이너리를 변경 없이 사용하였다. 각 구간을 구성별로 한 번씩 평가하여, 구성당 총 4092개의 대상 토큰을 채점하였다. 전체 PPL은 네 구간의 토큰 평균 음의 로그우도(NLL)에 지수 함수를 적용한 값이다.
 
 Needle-in-a-Haystack(NIAH) 검색 평가에는 6자리 정답 코드를 삽입한 고정 WikiText-2 배경 문서 10개를 사용하였다. 삽입 깊이는 0, 25, 50, 75, 100\%의 다섯 가지이며, 컨텍스트 용량은 1K, 2K, 4K, 8K토큰이다(1K = 1024). 각 구성은 200개의 프롬프트로 평가하며, 각 프롬프트에서 비사고(non-thinking) 모드의 그리디 생성으로 한 번씩 디코딩하였다. 최대 64개의 출력 토큰을 확보하기 위해 프롬프트 길이를 컨텍스트 용량에서 64토큰을 뺀 범위 이내로 제한하였다. 정답으로 인정하려면 출력에서 독립된 6자리 코드가 정확히 하나 추출되어야 하며, 이 코드가 정답과 일치해야 한다. FP16 KV/어텐션, TurboQuant K4/V4, 그리고 Boundary 배치에서 K8/K4와 V2를 사용하는 두 구성을 비교하였다.
 
+% Keep the results heading with its opening comparison after shortening IV.
+\Needspace{15\baselineskip}
 \section{결과 및 분석}
 \subsection{종단 간 성능 및 품질}
 PU-K8을 가우시안 모델에서 스칼라 복원의 MSE가 더 낮은 Lloyd--Max K8과 비교하였다. 이 비교는 전체 구현을 평가한다.
