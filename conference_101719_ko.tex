@@ -1,5 +1,5 @@
-% English source SHA256: 585f8f80051ab9d4019ff29019e6e7ab36508d9d4989f8f27893a00d34f1d607
-% Korean review translation of conference_101719.tex, 2026-11-05.
+% English source SHA256: 97440b0e462f322d439478b6e66afec460b9e60627fd66afbf8e46b0e8c99aa8
+% Korean review translation of conference_101719.tex, 2026-11-06.
 % Translation follows the English source; figure assets, equations and results are shared.
 % Figure-internal labels, author names/department names, and bibliography remain English.
 % Build: latexmk -lualatex -interaction=nonstopmode -halt-on-error conference_101719_ko.tex
@@ -146,14 +146,14 @@ K4에서 $\mathcal{L}_4^+$는 $j\in\{0,\ldots,7\}$로 인덱싱되는 양의 Llo
 \section{실험 방법}
 실험에는 Qwen3-1.7B~\cite{qwen3}(W4A16)를 사용하였으며, Galaxy S26 Ultra(SM8850)에서 실행하였다. QAIRT 2.48.0.260626과 버스트 모드의 HTP 백엔드를 사용하였다. 추론은 단일 시퀀스로 수행하며, 성능 및 PPL 평가의 컨텍스트 용량은 1024이다. Odd와 Boundary 배치에서 동일한 레이어 마스크를 적용하여 PU-K8과 Lloyd--Max K8을 비교하였다. 가중치, 활성값 인코딩, 회전, 노름 보정 및 K4/V2 경로는 고정하였다.
 
-성능 평가에는 프롬프트 897토큰과 생성 128토큰을 사용하였다. 각 실행은 전체 워밍업, 캐시 초기화, 측정 세션으로 구성된다. TTFT에는 모델 로딩 시간이 포함되지 않으며, 디코딩 처리량은 프리필 이후 자기회귀 단계의 총 소요 시간으로 127을 나누어 계산한다. 각 구성에서 실행 순서의 영향을 상쇄하도록 순서를 배치하여 10회의 측정 세션을 수행하였으며, 실행 사이에는 10초의 대기 시간을 두었다. 평균과 표본 표준편차를 보고하고, 개선율은 구성별 평균으로 계산하였다.
+성능 평가에는 프롬프트 897토큰과 생성 128토큰을 사용하였다. 각 실행은 전체 워밍업, 캐시 초기화, 측정 세션으로 구성된다. TTFT에는 모델 로딩 시간이 포함되지 않으며, 디코딩 처리량은 프리필 이후 자기회귀 단계의 총 소요 시간으로 127을 나누어 계산한다. 각 구성에서 실행 순서의 영향을 상쇄하도록 순서를 배치하여 10회의 측정 세션을 수행하였으며, 실행 사이에는 10초의 대기 시간을 두었다. 평균과 표본 표준편차를 보고하고, 개선율은 구성별 평균으로 계산하였다. 동일한 세션 로그에서 호스트가 관측한 QNN 그래프 호출 경과 시간과 나머지 실행 시간을 구분하였다.
 
 품질은 재사용한 WikiText-2~\cite{wikitext} 기준 구간 4개에 대해 교사 강제(teacher forcing) 방식으로 PPL을 평가하였다. 각 구간은 1024토큰이며, 성능 평가에 사용한 바이너리를 변경 없이 사용하였다. 각 구간을 구성별로 한 번씩 평가하여, 구성당 총 4092개의 대상 토큰을 채점하였다. 전체 PPL은 네 구간의 토큰 평균 음의 로그우도(NLL)에 지수 함수를 적용한 값이다.
 
 Needle-in-a-Haystack(NIAH) 검색 평가에는 6자리 정답 코드를 삽입한 고정 WikiText-2 배경 문서 10개를 사용하였다. 삽입 깊이는 0, 25, 50, 75, 100\%의 다섯 가지이며, 컨텍스트 용량은 1K, 2K, 4K, 8K토큰이다(1K = 1024). 각 구성은 200개의 프롬프트로 평가하며, 각 프롬프트에서 비사고(non-thinking) 모드의 그리디 생성으로 한 번씩 디코딩하였다. 최대 64개의 출력 토큰을 확보하기 위해 프롬프트 길이를 컨텍스트 용량에서 64토큰을 뺀 범위 이내로 제한하였다. 정답으로 인정하려면 출력에서 독립된 6자리 코드가 정확히 하나 추출되어야 하며, 이 코드가 정답과 일치해야 한다. FP16 KV/어텐션, TurboQuant K4/V4, 그리고 Boundary 배치에서 K8/K4와 V2를 사용하는 두 구성을 비교하였다.
 
-% Keep the results heading with its opening comparison after shortening IV.
-\Needspace{15\baselineskip}
+% Keep the results heading with its opening comparison.
+\Needspace{8\baselineskip}
 \section{결과 및 분석}
 \subsection{종단 간 성능 및 품질}
 PU-K8을 가우시안 모델에서 스칼라 복원의 MSE가 더 낮은 Lloyd--Max K8과 비교하였다. 이 비교는 전체 구현을 평가한다.
@@ -166,6 +166,8 @@ PU-K8을 가우시안 모델에서 스칼라 복원의 MSE가 더 낮은 Lloyd--
 \end{figure}
 
 그림~\ref{fig:performance}에서 Boundary 배치의 PU-K8은 평균 TTFT를 31.12\% 줄이고, 프리필 및 디코딩 처리량을 각각 45.22\%, 14.41\% 높였다. 별도의 Odd 배치 실험에서는 TTFT가 32.62\% 줄었으며, 프리필 및 디코딩 처리량은 각각 48.49\%, 13.61\% 높아졌다. 평가한 기기에서 두 레이어 마스크 모두 속도 향상이 관측되었다.
+
+동일한 Boundary 세션에서 평균 누적 QNN 그래프 호출 시간은 프리필 중 697.47\,ms에서 475.11\,ms로, 생성 토큰당 28.43\,ms에서 24.63\,ms로 줄었다. 전체 토큰당 지연은 30.21\,ms에서 26.41\,ms로 줄었으며, 나머지 시간은 약 1.78\,ms로 유지되었다. 따라서 시간 감소는 실행과 스케줄링·대기 시간을 포함하는 그래프 호출 내부에 집중된다.
 
 \begin{table}[!ht]
 \caption{Odd에서 Boundary 배치로 변경했을 때의 기준 구간 PPL 감소.}
@@ -194,7 +196,7 @@ PU-K8 & 23.61 & \textbf{20.17} & 14.58\\
 \label{fig:niah}
 \end{figure*}
 
-\Needspace{17\baselineskip}
+\Needspace{5\baselineskip}
 \subsection{균일 양자화와의 비교}
 균일 양자화 기준선은 하나의 간격을 갖는 대칭적인 256레벨 격자를 사용한다. 간격은 동일한 가우시안 모델에서 결정하고 FP16으로 고정하였으며, KV 데이터나 PPL을 이용한 튜닝은 수행하지 않았다. 두 방식 모두 산술 HVX 디코더와 동일한 Odd 배치를 사용하므로, 동일한 배포 조건에서 단일 구간과 두 구간 양자화를 비교할 수 있다.
 
@@ -208,14 +210,16 @@ PU-K8 & 23.61 & \textbf{20.17} & 14.58\\
 그림~\ref{fig:uniform}에서 PU-K8은 별도의 네 문서 집합에서 PPL을 11.28\% 낮췄다. 3회 성능 측정의 차이는 작고 측정 범위가 겹치므로, 어느 쪽도 명확한 속도 우위를 보이지 않는다. PU-K8은 세 문서에서 NLL을 개선하였지만, 전체 순개선량의 79.65\%는 한 문서에서 발생하였다. 따라서 품질 개선은 이 작은 문서 집합에서 얻은 제한적인 근거이다. 기준 구간 PPL은 Uniform이 23.7939, PU-K8이 23.6122이다.
 
 \subsection{인코더 및 디코더 분석}
-PU-K8 인코더는 스칼라 인덱싱과 레벨/스케일 복원을 단순화하여, Lloyd--Max K8의 837개보다 적은 76개의 ONNX 노드를 사용한다. 동일한 입력을 사용한 단일 AR128 측정에서 SDK 실행 시간은 약 52\% 짧았다(그림~\ref{fig:codec-costs}).
+자기회귀 디코딩에는 새 KV의 인코딩, 캐시된 KV의 디코딩 및 어텐션이 포함된다. PU-K8은 반복적인 경계 비교와 레벨 선택을 산술 인덱싱과 복원으로 대체하여, 인코더 그래프의 ONNX 노드를 837개에서 76개로 줄인다. 동일한 입력을 사용한 단일 측정에서 SDK 실행 시간은 AR128(프리필)에서 52.21\%, AR1(토큰 생성)에서 9.78\% 짧았다(그림~\ref{fig:codec-costs}). AR128에서 더 큰 인코더 시간 감소가 나타난 점은 프리필에서 더 큰 속도 향상을 보인 결과와 부합한다.
 
-동일한 입력 코드와 스케일을 사용할 때, Lloyd--Max LUT 디코더와 PU-K8 산술 디코더는 각각 해당 방법의 FP16 참조 결과와 비트 단위로 정확히 일치한다. 단일 256토큰 측정에서 PU-K8의 SDK 실행 시간 감소는 1.4\%에 그쳤다.
+캐시된 KV의 디코딩에서는 산술 복원이 LUT 로드를 제거한다. 256토큰 측정에서 SDK 실행 시간 감소는 1.38\%에 그쳤다. 동일한 입력 코드와 스케일을 사용할 때, 각 디코더는 해당 방법의 FP16 참조 결과와 비트 단위로 정확히 일치한다.
+
+이러한 개별 측정은 전체 모델과 텐서 크기 및 실행 조건이 다르므로, 측정값을 합산하여 전체 속도 향상을 설명할 수 없다. 세션 로그는 그래프 호출 내부의 시간 감소를 보여주지만, 인코더·KV 디코더·어텐션 각각의 기여를 분리하지는 않는다.
 
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\columnwidth,trim=0 6bp 0 6bp,clip]{figures/kv_cache_codec_costs.pdf}
-\caption{단일 측정의 SDK 실행 시간: AR128 인코더와 256토큰 디코더. 백분율은 각 회색 기준선 대비 변화율이다.}
+\caption{AR128/AR1 인코더와 256토큰 KV 디코더의 단일 측정 SDK 실행 시간. 백분율은 Lloyd--Max K8 대비 변화율이며, 개별 측정 시간은 합산할 수 없다.}
 \label{fig:codec-costs}
 \end{figure}
 

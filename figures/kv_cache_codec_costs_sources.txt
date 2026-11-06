@@ -1,12 +1,13 @@
-Fig. 5 codec-cost provenance (reviewed 2026-11-05)
+Fig. 5 codec-cost provenance (reviewed 2026-11-06)
 
 Report root: /mnt/d/ai-hub-models/binaries/turboquant/lloyd_max_k8_convergence_20261020
 Aggregate report: codec_costs.json
 Aggregate SHA256: 536631c5c200b0ccd543a25990d291781afce6cd2e6629deefc3c7ca80bcce03
 Protocol: protocol.json; Native package: /mnt/d/ai-hub-models/binaries/turboquant/structured_k8_decoder_20261013/native
 
-Encoder rows are unchanged: LM8-Converged (Lloyd-Max K8) and Structured (PU-K8),
-one AR128 diagnostic each using the same captured layer-0 K input.
+Original encoder rows are unchanged. AR1 SDK execution rows were added from the
+same report: LM8-Converged (Lloyd-Max K8) and Structured (PU-K8), one diagnostic
+per AR128 and AR1 shape using matched captured layer-0 K inputs.
 
 Decoder comparison uses lm8_converged and structured, not structured_lut_control.
 Each is one instrumented 256-token qnn-net-run invocation, with detailed/optrace
@@ -56,3 +57,21 @@ Summary: /home/hjw/git/ai-hub-models/scripts/llm/turboquant/README.md, Isolated 
 Correction: the former decoder baseline 4469 us / 769 us belonged to PU-K8
 LUT control and was inconsistent with the Lloyd-Max graph legend. The figure
 now uses the existing Lloyd-Max measurements above; no new experiment was run.
+
+AR1 encoder source validation (added 2026-11-06):
+  AR1: Lloyd-Max 1472 us; PU-K8 1328 us; observed change -9.7826086957%.
+  AR128 remains Lloyd-Max 3187 us; PU-K8 1523 us (-52.2121117038%).
+  Each row selects group, tokens (1 or 128), case=layer0 in codec_costs.json.
+  The selected timing is timings.accelerator_execute_us[0].
+  AR1 is the autoregressive input shape; AR128 is the prefill input shape.
+  Both are single standalone instrumented probes. Full-model plots instead use
+  warmed repeated unprofiled burst-policy sessions, including all graph parts.
+  The AR1 encoder probe, AR128 encoder probe, and 256-token decoder probe cannot
+  be added or used as whole-model speedup percentages.
+
+  lm8_converged: SDK execute 1472 us
+  encoder_lm8_converged/device/tq_encode_key_t1_detailed.profile.txt
+    SHA256: 95ebcc4dafbff154bf8928fee86cdea85cd7ffd0b124b784ed7f9090ba309d10
+  structured: SDK execute 1328 us
+  encoder_structured/device/tq_encode_key_t1_detailed.profile.txt
+    SHA256: b9ae0738bbd03e952251196874ccf1fdfea8d484d14393a0b5b722c3c1ffa6b7

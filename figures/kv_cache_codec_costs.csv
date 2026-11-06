@@ -9,3 +9,5 @@ Decoder,SDK execute,us,Lloyd–Max K8,4491,256,1
 Decoder,SDK execute,us,PU-K8,4429,256,1
 Decoder,Execute excluding wait,us,Lloyd–Max K8,758,256,1
 Decoder,Execute excluding wait,us,PU-K8,653,256,1
+Encoder,SDK execute,us,Lloyd–Max K8,1472,1,1
+Encoder,SDK execute,us,PU-K8,1328,1,1
