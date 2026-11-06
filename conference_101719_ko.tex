@@ -1,4 +1,4 @@
-% English source SHA256: 4a4e99f12ac7b4605002a60e6569e09064534603b30dc0f9145fbf72bdd44af1
+% English source SHA256: da14a832bea2d4e25b56290f22ff50d99fd86a8c2396503173daad87eb196882
 % Korean review translation of conference_101719.tex, 2026-11-06.
 % Translation follows the English source; figure assets, equations and results are shared.
 % Figure-internal labels, author names/department names, and bibliography remain English.
@@ -127,16 +127,6 @@ K4에서 $\mathcal{L}_4^+$는 $j\in\{0,\ldots,7\}$로 인덱싱되는 양의 Llo
  \label{eq:index}
 \end{equation}
 위의 내림 연산 규칙에서는 두 인덱스의 정확한 중간값을 큰 쪽 인덱스로 반올림한다. 실제 실행에서는 저장된 역수와 중간 단계의 FP16 반올림을 사용하므로, 인덱스 경계 부근에서 선택 결과가 달라질 수 있다.
-
-\emph{바이트 인코딩.} 크기 인덱스 $j$와 $y$의 부호를 하나의 UINT8 코드에 저장한다.
-\begin{equation}
- \boxed{b=\begin{cases}
-  128+j,&y\geq0,\\
-  127-j,&y<0.
- \end{cases}}
- \label{eq:byte}
-\end{equation}
-음수에서는 기존 오름차순 LUT 배열과의 호환성을 유지하기 위해 크기 인덱스를 반전한다. 디코더는 $b\geq128$이면 $j=b-128$로, 그렇지 않으면 $j=127-b$로 복원한다.
 
 % Keep the decoder paragraph together in the Korean review layout.
 \Needspace{11\baselineskip}

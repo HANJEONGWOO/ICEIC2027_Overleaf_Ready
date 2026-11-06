@@ -1,5 +1,5 @@
-% III-B: four boxed logical equations; Eq. (2) contrasts Lloyd--Max K4 and PU-K8.
-% The symbol p denotes bit width; b is an 8-bit code, not a sign bit.
+% III-B: three boxed logical equations; Eq. (2) contrasts Lloyd--Max K4 and PU-K8.
+% The symbol p denotes bit width.
 % Reconstruction-level terminology and level notation are consistent throughout.
 % Existing FP16 rounding and byte mapping retained; retained table values are unchanged.
 % ICEIC 2027 -- English working draft v7: supplied overview and design explanation, 2026-11-02.
@@ -130,16 +130,6 @@ The local index is
  \label{eq:index}
 \end{equation}
 The logical floor rule rounds half-step ties upward. Execution uses a stored reciprocal with intermediate FP16 rounding, which can shift decisions near index boundaries.
-
-\emph{Byte encoding.} The magnitude index $j$ and the sign of $y$ are stored in one UINT8 code:
-\begin{equation}
- \boxed{b=\begin{cases}
-  128+j,&y\geq0,\\
-  127-j,&y<0.
- \end{cases}}
- \label{eq:byte}
-\end{equation}
-For negative values, the magnitude index is reflected to preserve compatibility with the existing ascending LUT layout. The decoder recovers $j=b-128$ for $b\geq128$ and $j=127-b$ otherwise.
 
 \subsection{HVX Arithmetic Decoder}
 The native HVX decoder recovers $r$ and $k$ from each stored byte and reconstructs $a_r+k\Delta_r$ using separate FP16 multiply and add operations. It then applies the sign and the effective FP16 scale used for norm correction, producing FP16 tiles for the existing attention path. Vectorized decoding avoids level-table loads and per-coordinate scalar loops. The coefficient payload is four FP16 values (8 bytes), replacing a 256-entry FP16 codebook (512 bytes).
