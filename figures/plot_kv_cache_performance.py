@@ -27,7 +27,7 @@ METHODS = ('Lloyd–Max K8', 'PU-K8')
 COLORS = ('#D7DADD', '#4472C4')  # Gray baseline and PowerPoint-style blue.
 EDGES = ('#777777', '#4472C4')
 INK, SECONDARY, GRID = '#222222', '#555555', '#DDDDDD'
-W, H = 248.4, 127.0  # 3.45-inch single-column width; all scene units are points.
+W, H = 248.4, 114.0  # 3.45-inch single-column width; all scene units are points.
 SCENE = {
     'width': W, 'height': H, 'font': 'Arial',
     'title': 'Boundary-placement performance and reference-window PPL',
@@ -87,10 +87,6 @@ for left, (metric, title, direction, maximum, ticks, precision) in zip(AXIS_LEFT
     else:
         values = [Decimal(timing[metric, PLACEMENT, method]['mean']) for method in METHODS]
     assert all(0 < value < maximum for value in values)
-    change = (values[1] - values[0]) / values[0] * 100
-    if metric != 'PPL':
-        stored = Decimal(timing[metric, PLACEMENT, METHODS[1]]['structured_improvement_percent'])
-        assert abs(abs(change) - stored) < Decimal('0.005')
 
     def yp(value):
         return BOTTOM - float(value) / maximum * (BOTTOM - TOP)
@@ -118,9 +114,6 @@ for left, (metric, title, direction, maximum, ticks, precision) in zip(AXIS_LEFT
 
     line(left, TOP, left, BOTTOM, INK, .45)
     line(left, BOTTOM, left + AXIS_WIDTH, BOTTOM, INK, .45)
-    delta = change.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-    text(left - 3, 114, AXIS_WIDTH + 6, 8,
-         f'{delta:+.2f}%'.replace('-', '−'), 6.3, color=SECONDARY)
 
 
 def render():
