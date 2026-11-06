@@ -207,19 +207,26 @@ The uniform baseline uses a symmetric 256-level grid with one spacing fitted und
 In Fig.~\ref{fig:uniform}, PU-K8 reduces PPL by 11.28\% on the separate four-document set. On the reference windows, PU-K8 reduces Uniform PPL by 0.76\% (23.79 to 23.61), also under Odd placement. The benefit varies by evaluation set; absolute PPL values across sets are not directly comparable. In the separate set, NLL improves on three documents, but most of the net gain comes from one. Three-run timings differ little and have overlapping ranges, showing no clear speed advantage.
 
 \subsection{Encoder and Decoder Analysis}
-Autoregressive decoding includes new-KV encoding, cached-KV decoding, and attention. PU-K8 replaces repeated boundary comparisons and level selection with arithmetic indexing and reconstruction, reducing the encoder graph from 837 to 76 ONNX nodes. Single probes with matched inputs show 52.21\% lower SDK execution time for AR128 (prefill) and 9.78\% for AR1 (token generation), as shown in Fig.~\ref{fig:codec-costs}. The stronger AR128 encoder reduction is consistent with the larger prefill speedup.
+Autoregressive decoding includes new-KV encoding, cached-KV decoding, and attention. PU-K8 replaces repeated boundary comparisons and level selection with arithmetic indexing and reconstruction, reducing the encoder graph from 837 to 76 ONNX nodes. The matched-input AR128 (prefill) probe shows 52.21\% lower SDK execution time (Table~\ref{tab:codec-costs}).
 
 For cached-KV decoding, arithmetic reconstruction avoids LUT loads. The 256-token probe shows only 1.38\% lower SDK execution time. With identical input codes and scales, each decoder matches its own FP16 reference bit-exactly.
 
 These isolated probes differ in shape and execution conditions from the full model and cannot be summed to explain its speedup. The session logs locate the savings within graph calls but do not separate encoder, KV-decoder, and attention contributions.
 
-\begin{figure}[!t]
+\begin{table}[!ht]
+\caption{Single-probe SDK execution times ($\mu$s). Probe times are not additive.}
+\label{tab:codec-costs}
 \centering
-% Trim only the verified empty top/bottom margins; retain all plotted content.
-\includegraphics[width=\columnwidth,trim=0 6bp 0 6bp,clip]{figures/kv_cache_codec_costs.pdf}
-\caption{Single-probe SDK execution times for AR128/AR1 encoders and 256-token KV decoders. Percentages show changes from Lloyd--Max K8; probe times are not additive.}
-\label{fig:codec-costs}
-\end{figure}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}llrr@{}}
+\toprule
+Component & Probe & Lloyd--Max K8 & \shortstack{PU-K8\\(ours)}\\
+\midrule
+Encoder & AR128 & 3,187 & \textbf{1,523}\\
+KV decoder & 256 tokens & 4,491 & \textbf{4,429}\\
+\bottomrule
+\end{tabular}
+\end{table}
 
 % Keep the conclusion and references together in the final column.
 \raggedend

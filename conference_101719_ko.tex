@@ -1,4 +1,4 @@
-% English source SHA256: 265348bcd902c4111591c5ffb9aeebd5e5127a1e89aba559052a700882e6097e
+% English source SHA256: 5508fc058b439f0727b1a55d4e8d9c3491d8c897063a6a8960ed3c8e0a9d4e8b
 % Korean review translation of conference_101719.tex, 2026-11-06.
 % Translation follows the English source; figure assets, equations and results are shared.
 % Figure-internal labels, author names/department names, and bibliography remain English.
@@ -200,18 +200,26 @@ PU-K8 & 23.61 & \textbf{20.17} & 14.58\\
 그림~\ref{fig:uniform}에서 PU-K8은 별도 문서 4개에서 PPL을 11.28\% 낮췄다. 같은 Odd 배치의 기준 구간에서는 Uniform 대비 PPL이 0.76\% 낮았다(23.79에서 23.61). 개선 폭은 평가 데이터에 따라 달라지며, 데이터 집합 간 PPL 절댓값은 직접 비교할 수 없다. 별도 문서 중 세 문서의 NLL이 개선되었지만, 순개선량의 대부분은 한 문서에서 발생하였다. 3회 성능 측정의 차이는 작고 측정 범위가 겹치므로, 어느 쪽도 명확한 속도 우위를 보이지 않는다.
 
 \subsection{인코더 및 디코더 분석}
-자기회귀 디코딩에는 새 KV의 인코딩, 캐시된 KV의 디코딩 및 어텐션이 포함된다. PU-K8은 반복적인 경계 비교와 레벨 선택을 산술 인덱싱과 복원으로 대체하여, 인코더 그래프의 ONNX 노드를 837개에서 76개로 줄인다. 동일한 입력을 사용한 단일 측정에서 SDK 실행 시간은 AR128(프리필)에서 52.21\%, AR1(토큰 생성)에서 9.78\% 짧았다(그림~\ref{fig:codec-costs}). AR128에서 더 큰 인코더 시간 감소가 나타난 점은 프리필에서 더 큰 속도 향상을 보인 결과와 부합한다.
+자기회귀 디코딩에는 새 KV의 인코딩, 캐시된 KV의 디코딩 및 어텐션이 포함된다. PU-K8은 반복적인 경계 비교와 레벨 선택을 산술 인덱싱과 복원으로 대체하여, 인코더 그래프의 ONNX 노드를 837개에서 76개로 줄인다. 동일한 입력을 사용한 AR128(프리필) 단일 측정에서 SDK 실행 시간은 52.21\% 짧았다(표~\ref{tab:codec-costs}).
 
 캐시된 KV의 디코딩에서는 산술 복원이 LUT 로드를 제거한다. 256토큰 측정에서 SDK 실행 시간 감소는 1.38\%에 그쳤다. 동일한 입력 코드와 스케일을 사용할 때, 각 디코더는 해당 방법의 FP16 참조 결과와 비트 단위로 정확히 일치한다.
 
 이러한 개별 측정은 전체 모델과 텐서 크기 및 실행 조건이 다르므로, 측정값을 합산하여 전체 속도 향상을 설명할 수 없다. 세션 로그는 그래프 호출 내부의 시간 감소를 보여주지만, 인코더·KV 디코더·어텐션 각각의 기여를 분리하지는 않는다.
 
-\begin{figure}[!t]
+\begin{table}[!ht]
+\caption{단일 측정 SDK 실행 시간($\mu$s). 개별 측정 시간은 합산할 수 없다.}
+\label{tab:codec-costs}
 \centering
-\includegraphics[width=\columnwidth,trim=0 6bp 0 6bp,clip]{figures/kv_cache_codec_costs.pdf}
-\caption{AR128/AR1 인코더와 256토큰 KV 디코더의 단일 측정 SDK 실행 시간. 백분율은 Lloyd--Max K8 대비 변화율이며, 개별 측정 시간은 합산할 수 없다.}
-\label{fig:codec-costs}
-\end{figure}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}llrr@{}}
+\toprule
+측정 대상 & 조건 & Lloyd--Max K8 & \shortstack{PU-K8\\(ours)}\\
+\midrule
+인코더 & AR128 & 3,187 & \textbf{1,523}\\
+KV 디코더 & 256토큰 & 4,491 & \textbf{4,429}\\
+\bottomrule
+\end{tabular}
+\end{table}
 
 % Keep the conclusion and references together in the final column.
 \raggedend
