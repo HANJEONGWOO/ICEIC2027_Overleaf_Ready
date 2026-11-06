@@ -63,7 +63,7 @@ KV cache, quantization, mobile NPU, piecewise-uniform quantization, Hexagon HVX
 \end{IEEEkeywords}
 
 \section{Introduction}
-Key--value (KV) cache quantization reduces storage and data movement, but encoding and decoding overhead can limit its benefits for mobile inference. KIVI motivates asymmetric key/value quantization~\cite{kivi}, while TurboQuant explores rotation-based scalar quantization~\cite{turboquant}. Practical deployment therefore requires evaluating codec costs alongside quantization error.
+Key--value (KV) cache quantization reduces storage and data movement, but encoding and decoding overhead can limit its benefits for mobile inference. At each generation step, new keys and values are encoded for storage, while cached entries are decoded for attention. KIVI motivates asymmetric key/value quantization~\cite{kivi}, while TurboQuant explores rotation-based scalar quantization~\cite{turboquant}. Practical deployment therefore requires evaluating codec costs alongside quantization error.
 
 Our work targets the K8 codec in a TurboQuant implementation in the Qualcomm AI Hub Models pipeline. Its Lloyd--Max encoder uses comparison trees and reconstruction-level selection subgraphs, while lookup-table (LUT) decoding requires table lookup and layout conversion. These costs motivate designing the quantization levels and their execution paths together.
 
@@ -90,7 +90,7 @@ where $Q$, $K$, and $V$ are queries, keys, and values, and $d$ is the key dimens
 KV quantization sensitivity varies across layers~\cite{kvtuner}, motivating higher precision in selected layers under a fixed cache budget. We mix K8 and K4 to maintain average K6 precision, with V2 throughout. Odd and Boundary are tested placements, not presumed optima; comparisons use matched masks.
 
 \subsection{Codec Execution Costs}
-In the inherited K8 implementation, Lloyd--Max encoding uses boundary comparisons and reconstruction-level selection, while LUT decoding loads the selected levels. Piecewise-uniform levels enable arithmetic indexing and native HVX reconstruction. Both K8 codecs store one byte per coordinate; K4/V2 retain their existing packed paths. Thus, the quantization-level structure and its execution path affect codec cost even at the same storage precision.
+In the inherited K8 implementation, Lloyd--Max encoding uses boundary comparisons and reconstruction-level selection, while LUT decoding loads the selected levels. The Lloyd--Max encoder expresses these decisions through multiple comparison and selection operators in the NPU graph. With uniform spacing within each region, PU-K8 computes indices arithmetically and reconstructs multiple coordinates in parallel using HVX vector multiply and add operations. Both K8 codecs store one byte per coordinate; K4/V2 retain their existing packed paths. Thus, the quantization-level structure and its execution path affect codec cost even at the same storage precision.
 
 % Start the method overview with enough room below its two-column figure.
 \Needspace{12\baselineskip}

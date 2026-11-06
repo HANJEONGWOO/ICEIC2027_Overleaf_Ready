@@ -1,4 +1,4 @@
-% English source SHA256: 67b5f3ad1e890fa219406ac871f840a5bd902ca64eb04b2eb81b91379d9225c5
+% English source SHA256: 407b8ddef3db95572d1ba87915440ce1296bc6fcdef0b42d331956858f34edcd
 % Korean review translation of conference_101719.tex, 2026-11-06.
 % Translation follows the English source; figure assets, equations and results are shared.
 % Figure-internal labels, author names/department names, and bibliography remain English.
@@ -62,7 +62,7 @@ KV 캐시, 양자화, 모바일 NPU, 구간별 균일 양자화, Hexagon HVX
 \end{IEEEkeywords}
 
 \section{서론}
-키--값(KV) 캐시 양자화는 저장량과 데이터 이동을 줄이지만, 인코딩과 디코딩 오버헤드가 모바일 추론에서 그 이점을 제한할 수 있다. KIVI는 키와 값의 비대칭 양자화에 대한 근거를 제시하며~\cite{kivi}, TurboQuant는 회전 기반 스칼라 양자화를 다룬다~\cite{turboquant}. 따라서 실제 배포에서는 양자화 오차와 함께 코덱의 실행 비용도 평가해야 한다.
+키--값(KV) 캐시 양자화는 저장량과 데이터 이동을 줄이지만, 인코딩과 디코딩 오버헤드가 모바일 추론에서 그 이점을 제한할 수 있다. 각 토큰 생성 단계에서는 새로운 키와 값을 인코딩해 저장하고, 캐시된 항목을 디코딩하여 어텐션에 사용한다. KIVI는 키와 값의 비대칭 양자화에 대한 근거를 제시하며~\cite{kivi}, TurboQuant는 회전 기반 스칼라 양자화를 다룬다~\cite{turboquant}. 따라서 실제 배포에서는 양자화 오차와 함께 코덱의 실행 비용도 평가해야 한다.
 
 본 연구는 Qualcomm AI Hub Models 파이프라인의 TurboQuant 구현에서 K8 코덱을 대상으로 한다. 기존 Lloyd--Max 인코더는 비교 트리와 복원 레벨 선택 서브그래프를 사용하며, 룩업 테이블(LUT) 디코딩에는 테이블 조회와 데이터 배치 변환이 필요하다. 이러한 비용을 고려하여 양자화 레벨과 실행 경로를 함께 설계한다.
 
@@ -89,7 +89,7 @@ PWLQ~\cite{pwlq}와 PTQ4ViT~\cite{ptq4vit} 등의 구간별 양자화 접근을 
 KV 양자화 민감도는 레이어마다 다르므로~\cite{kvtuner}, 고정된 캐시 예산에서 일부 레이어에 더 높은 정밀도를 배정할 수 있다. 본 연구에서는 K8과 K4를 혼합하여 평균 K6 정밀도를 유지하고, 모든 값에는 V2를 사용한다. Odd와 Boundary는 실험한 배치 방식이며 최적이라고 가정하지 않는다. 비교에는 동일한 레이어 마스크를 사용한다.
 
 \subsection{코덱 실행 비용}
-기존 K8 구현에서 Lloyd--Max 인코딩은 경계 비교와 복원 레벨 선택을 사용하고, LUT 디코딩은 선택된 레벨을 읽는다. 구간별로 균일한 레벨을 사용하면 산술 인덱싱과 네이티브 HVX 복원이 가능하다. 두 K8 코덱은 모두 좌표당 한 바이트를 저장하며, K4/V2는 기존 패킹 경로를 유지한다. 따라서 동일한 저장 정밀도에서도 양자화 레벨의 구조와 실행 경로에 따라 코덱 비용이 달라진다.
+기존 K8 구현에서 Lloyd--Max 인코딩은 경계 비교와 복원 레벨 선택을 사용하고, LUT 디코딩은 선택된 레벨을 읽는다. Lloyd--Max 인코더는 이러한 결정을 NPU 그래프의 여러 비교 및 선택 연산자로 표현한다. PU-K8은 각 구간의 일정한 간격을 이용해 인덱스를 산술적으로 계산하고, HVX 벡터 곱셈과 덧셈으로 여러 좌표를 병렬 복원한다. 두 K8 코덱은 모두 좌표당 한 바이트를 저장하며, K4/V2는 기존 패킹 경로를 유지한다. 따라서 동일한 저장 정밀도에서도 양자화 레벨의 구조와 실행 경로에 따라 코덱 비용이 달라진다.
 
 \section{하드웨어 인지형 K8 코덱 설계}
 \label{sec:method}
