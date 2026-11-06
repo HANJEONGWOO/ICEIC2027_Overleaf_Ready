@@ -1,4 +1,4 @@
-"""Export Fig. 2 with native PowerPoint charts and embedded Excel data.
+"""Export a comparison figure with native PowerPoint charts and Excel data.
 
 Requires python-pptx >= 1.0.2. Bars, axes and data labels are chart elements;
 only the shared legend and metric headings are standalone shapes/text.
@@ -23,7 +23,7 @@ def _element(tag, **attributes):
     return node
 
 
-def write_native_pptx(scene, panels, path, colors, edges):
+def write_native_pptx(scene, panels, path, colors, edges, methods, notes):
     prs = Presentation()
     prs.slide_width = 12192000
     scale = prs.slide_width / scene['width']
@@ -78,8 +78,9 @@ def write_native_pptx(scene, panels, path, colors, edges):
     for p in panels:
         data = CategoryChartData()
         data.categories = [p['metric']]
-        for name, value in zip(('Lloyd–Max K8', 'PU-K8 (ours)'), p['values']):
-            data.add_series(name, [float(value)])
+        for name, value in zip(methods, p['values']):
+            # Keep Decimal values through chart-cache and XLSX serialization.
+            data.add_series(name, [value])
         # A chart frame includes the y tick labels and an explicit inner plot.
         frame_left, frame_top, frame_width, frame_height = p['left'] - 18, 40, 58, scene['height'] - 40
         frame = slide.shapes.add_chart(
@@ -155,11 +156,5 @@ def write_native_pptx(scene, panels, path, colors, edges):
         axis.format.line.color.rgb = color('#222222')
         axis.format.line.width = Pt(.45 * font_scale)
 
-    slide.notes_slide.notes_text_frame.text = (
-        'Fig. 2: four native clustered column charts. Right-click a chart and choose '
-        'Edit Data to edit its embedded Excel workbook. Timing values are means of '
-        '10 runs; PPL is from the reference windows. Data labels are rounded, while '
-        'the workbooks retain original measurement precision. Units: TTFT in ms; '
-        'Prefill and Decode in tokens/s. CSV files remain the paper source of truth. '
-        'PowerPoint edits do not automatically update the CSV or manuscript PDF.')
+    slide.notes_slide.notes_text_frame.text = notes
     prs.save(Path(path))

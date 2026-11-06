@@ -1,0 +1,29 @@
+Fig. 4 편집 안내
+
+kv_cache_uniform_comparison.pptx에는 TTFT, Prefill, Decode, PPL의 실제
+PowerPoint 묶은 세로 막대형 차트 4개와 각 차트의 Excel 데이터가 내장됩니다.
+
+차트 우클릭 → '데이터 편집'에서 값을 수정하면 막대 높이와 수치 라벨이
+함께 갱신됩니다. 축과 계열 서식으로 범위, 눈금, 색상, 간격을 바꿀 수 있습니다.
+상단 공통 범례와 지표 제목은 별도의 편집 가능한 도형/텍스트입니다.
+
+데이터는 kv_cache_uniform_comparison.csv의 Uniform K8 / PU-K8입니다.
+실행 성능은 Odd 배치의 구성별 3회 측정 평균입니다. PPL은 별도 문서 4개의
+Held-out PPL이며 Reference PPL 행을 사용하지 않습니다. 원래 정밀도로
+저장하고, 차트 표시 숫자만 반올림합니다.
+
+Fig. 2와 같은 색상, 글꼴, 간격, 실행 성능 축 범위를 사용합니다.
+PPL 값이 30을 넘으므로 PPL 축은 0–45로 표시합니다.
+단위는 논문 캡션에 표시하며, 차트에 표준편차와 변화율은 표시하지 않습니다.
+
+스크립트 재생성(저장소 루트에서 실행):
+  python -m pip install -r figures/requirements.txt
+  python figures/plot_kv_cache_uniform_comparison.py
+Liberation Sans TrueType 글꼴도 필요합니다.
+스크립트를 실행하면 PPTX 수동 편집 내용은 CSV 기준으로 다시 생성됩니다.
+
+논문용 PDF/PNG는 Matplotlib, PPTX는 PowerPoint 차트로 생성합니다.
+PPT에서 편집한 배치를 논문에 반영하려면 슬라이드를 PDF로 내보내
+figures/kv_cache_uniform_comparison.pdf를 교체하고 논문을 다시 컴파일합니다.
+kv_cache_uniform_comparison_native_preview.pdf는 실제 PPTX를 LibreOffice로
+렌더링한 확인용 파일이며, PPT 수정 후에는 다시 내보내야 합니다.
