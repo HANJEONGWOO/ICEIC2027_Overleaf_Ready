@@ -2,13 +2,14 @@
 """Rebuild Fig. 2 as a compact academic bar chart and editable PowerPoint.
 
 Run: python figures/plot_kv_cache_performance.py
-Requires matplotlib and Liberation Sans TrueType fonts. No inference is run.
+Requires matplotlib, python-pptx >= 1.0.2 and Liberation Sans TrueType fonts.
+No inference is run.
 Timing: original means from ten measured sessions per method; SD is not plotted.
 PPL: one evaluation per reused reference window (4092 targets), without SD.
 Only Boundary rows are plotted; the Odd source data remain unchanged.
 Bar heights use the original precision; text alone is rounded.
-A shared vector scene produces the PDF/PNG and native editable PPTX shapes.
-PPTX bars/axes/text are editable objects, not Excel-backed chart objects.
+PDF/PNG use the vector scene; PPTX uses four native PowerPoint charts with
+embedded Excel workbooks. Both exports use the same measured data and styles.
 """
 from pathlib import Path
 import csv
@@ -19,7 +20,7 @@ matplotlib.use('Agg')
 from matplotlib import font_manager
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
-from overview_pptx import write_pptx
+from performance_pptx import write_native_pptx
 
 HERE = Path(__file__).resolve().parent
 PLACEMENT = 'Boundary'
@@ -80,6 +81,7 @@ PANELS = (
 AXIS_LEFT = (18, 82, 145, 208)
 AXIS_WIDTH, TOP, BOTTOM = 38, 45, 106
 BAR_WIDTH = 10.8
+PPTX_PANELS = []
 
 for left, (metric, title, direction, maximum, ticks, precision) in zip(AXIS_LEFT, PANELS):
     if metric == 'PPL':
@@ -87,6 +89,9 @@ for left, (metric, title, direction, maximum, ticks, precision) in zip(AXIS_LEFT
     else:
         values = [Decimal(timing[metric, PLACEMENT, method]['mean']) for method in METHODS]
     assert all(0 < value < maximum for value in values)
+    PPTX_PANELS.append(dict(metric=metric, values=values, maximum=maximum,
+                            tick_step=ticks[1] - ticks[0], precision=precision,
+                            left=left, width=AXIS_WIDTH, top=TOP, bottom=BOTTOM))
 
     def yp(value):
         return BOTTOM - float(value) / maximum * (BOTTOM - TOP)
@@ -147,8 +152,8 @@ def render():
             metadata.update(CreationDate=None, ModDate=None)
         fig.savefig(HERE / f'kv_cache_performance.{extension}', dpi=400, metadata=metadata)
     plt.close(fig)
-    write_pptx(SCENE, HERE / 'kv_cache_performance.pptx')
-    print('Created Fig. 2 PDF / PNG / editable PPTX; original means and PPL preserved.')
+    write_native_pptx(SCENE, PPTX_PANELS, HERE / 'kv_cache_performance.pptx', COLORS, EDGES)
+    print('Created Fig. 2 PDF / PNG / native-chart PPTX; original means and PPL preserved.')
 
 
 if __name__ == '__main__':
