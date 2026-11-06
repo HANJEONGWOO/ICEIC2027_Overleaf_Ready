@@ -72,7 +72,7 @@ Building on piecewise quantization approaches such as PWLQ~\cite{pwlq} and PTQ4V
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/kv_cache_overview.pdf}
-\caption{Hardware-aware K8 codec in a mixed-precision KV cache with Boundary placement. Connectors map each layer group's K precision to its fixed codec; K4/V2 retain Lloyd--Max. The right panel shows the Gaussian design model and all frozen FP16 reconstruction levels (16/256/4 for K4/K8/V2). Gray traces use captured Qwen3-1.7B KV samples with CPU-emulated normalization and rotation, plotted as $z=\sqrt{d}\,y$ with $d=128$.}
+\caption{Hardware-aware K8 codec in a mixed-precision KV cache with Boundary placement. Connectors map each layer group's K precision to its fixed codec; K4/V2 retain Lloyd--Max.}
 \label{fig:overview}
 \end{figure*}
 

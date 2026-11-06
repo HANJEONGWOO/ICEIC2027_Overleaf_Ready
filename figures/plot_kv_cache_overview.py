@@ -2,7 +2,8 @@
 """Draw the paper overview as editable, flat vector shapes.
 
 Run: python figures/plot_kv_cache_overview.py
-Requires numpy and matplotlib; the PowerPoint exporter uses only the stdlib.
+Requires numpy, matplotlib and Liberation Sans TrueType fonts.
+The PowerPoint exporter uses only the stdlib.
 No inference or parameter fitting is performed. Frozen levels and empirical
 histograms, including their provenance, are read from the adjacent JSON files.
 Outputs: PDF (paper), SVG, PNG (preview), and editable PPTX.
@@ -16,24 +17,24 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle, Circle, Polygon
+from matplotlib import font_manager
 from overview_pptx import write_pptx
 
 HERE = Path(__file__).resolve().parent
 LEVELS = json.loads((HERE / 'kv_cache_overview_levels.json').read_text())
 DENSITY = json.loads((HERE / 'kv_cache_overview_density.json').read_text())
-QUANTIZER_OFFSET = 32  # Reserve a visible routing channel between stages 2 and 3.
-W, H = 1200 + QUANTIZER_OFFSET, 500
-INK = '#253449'
-SECONDARY = '#596777'
-BLUE = '#3766BD'
-GREEN = '#367F68'
-BLUE_PALE = '#EDF3FB'
-GREEN_PALE = '#EEF5F1'
-COARSE = '#B87542'
-FINE_FILL = '#C9DCF5'
-COARSE_FILL = '#F1D8C2'
-LINE = '#CFD6DE'
-GRAY = '#8F9BA7'
+W, H = 1232, 500
+INK = '#222222'
+SECONDARY = '#555555'
+BLUE = '#38668A'
+GREEN = '#477B65'
+BLUE_PALE = '#EAF0F5'
+GREEN_PALE = '#EEF3EF'
+COARSE = '#AB7448'
+FINE_FILL = '#E3ECF5'
+COARSE_FILL = '#F3E9DE'
+LINE = '#8A8A8A'
+GRAY = '#8B8B8B'
 SCENE = {'width': W, 'height': H, 'font': 'Arial', 'shapes': []}
 
 def rect(x, y, w, h, fill=None, stroke=None, lw=1):
@@ -62,130 +63,96 @@ def arrow(x1, y1, x2, y2, color=GRAY, lw=1.8, head=5):
                      [x2-head*math.cos(angle)-head*.55*math.sin(angle),
                       y2-head*math.sin(angle)+head*.55*math.cos(angle)]], color)
 
-def heading(x, width, number, label):
-    rect(x, 5, 24, 24, BLUE)
-    text(x, 5, 24, 24, str(number), 16, '#FFFFFF', True, 'center')
-    text(x+34, 2, width-34, 30, label, 20, bold=True)
-    line([[x,40],[x+width,40]], LINE, 1)
+# Plain panel titles and native shapes keep the figure easy to edit in PPT.
+# This is a visual style, not a claim that the diagram was drawn without AI aid.
+text(7, 3, 288, 29, '(a) KV cache budget', 21, bold=True)
+text(328, 3, 287, 29, '(b) Layer allocation', 21, bold=True)
+text(696, 3, 529, 29, '(c) Hardware-aware KV codecs', 21, bold=True)
 
-heading(0, 288, 1, 'Asymmetric KV budget')
-heading(321, 283, 2, 'Boundary allocation')
-heading(638 + QUANTIZER_OFFSET, 562, 3, 'Hardware-aware KV codecs')
-for x in (304,):
-    line([[x,55],[x,233]], LINE, .8)
-    line([[x,269],[x,496]], LINE, .8)
-    arrow(x-10,251,x+10,251,SECONDARY,1.6,6)
+# (a) The bar shows index storage only: K:V = 3:1 exactly.
+for x,sub in ((41,'KV'),(136,'K'),(218,'V')):
+    text(x,65,23,36,'B',29,italic=True)
+    text(x+20,82,30,22,sub,17,italic=True)
+text(99,66,28,36,'=',28,align='center')
+text(178,66,25,36,'+',28,align='center')
+rect(16,126,192,42,BLUE_PALE,INK,1.25)
+rect(208,126,64,42,GREEN_PALE,INK,1.25)
+text(16,126,192,42,'K: 6 bits (avg.)',18,align='center')
+text(208,126,64,42,'V: 2',18,align='center')
+text(1,178,288,25,'8 index bits per K/V pair (avg.)',17,align='center')
 
-# 1. Budget: a true 3:1 index-bit ratio, flat tensor slices, concise motivation.
-text(0,49,288,23,'Split the index-storage budget',16,SECONDARY,align='center')
-# Native text runs keep mathematical subscripts editable and avoid Unicode
-# subscript-glyph substitution across Matplotlib / PowerPoint fonts.
-for x,sub in ((49,'KV'),(134,'K'),(210,'V')):
-    text(x,84,21,37,'B',28,italic=True)
-    text(x+20,100,25,20,sub,16,italic=True)
-text(98,84,28,37,'=',27,align='center')
-text(174,84,24,37,'+',27,align='center')
-rect(16,139,192,37,BLUE)
-rect(208,139,64,37,GREEN)
-text(16,139,192,37,'K: 6 bits (avg.)',17,'#FFFFFF',True,'center')
-text(208,139,64,37,'V: 2',17,'#FFFFFF',True,'center')
-text(0,183,288,25,'8 index bits per K/V pair on average',15,SECONDARY,align='center')
-for x, label, color, pale, description, precision, detail in (
-    (8,'Keys (K)',BLUE,BLUE_PALE,'Attention\nweights','K4 / K8','6 bits on average'),
-    (153,'Values (V)',GREEN,GREEN_PALE,'Weighted\nsum','V2','2 bits per value'),
+for x,label,color,pale,description,precision in (
+    (17,'Key (K)',BLUE,BLUE_PALE,'Attention\nweights','K4 / K8'),
+    (160,'Value (V)',GREEN,GREEN_PALE,'Weighted\nsum','V2'),
 ):
-    rect(x,228,127,235,'#FFFFFF',LINE,1)
-    rect(x,228,127,33,pale)
-    rect(x,228,3,33,color)
-    text(x+5,229,117,31,label,18,color,True,'center')
-    text(x+6,269,115,43,description,16,align='center')
-    # Each outline is a KV-head slice, rather than a shaded 3-D object.
-    for offset in (8,4,0):
-        rect(x+19+offset,332-offset,80,56,'#FFFFFF',color,.8)
-    rect(x+19,332,80,56,pale,color,.9)
-    for i in range(1,6): line([[x+19+i*80/6,332],[x+19+i*80/6,388]],color,.55)
-    for i in range(1,4): line([[x+19,332+i*14],[x+99,332+i*14]],color,.55)
-    text(x+25,394,55,22,'T × d',15,SECONDARY,italic=True)
-    text(x+63,403,35,17,'head',10,SECONDARY,italic=True)
-    text(x+4,420,119,23,precision,20,color,True,'center')
-    text(x+3,445,121,16,detail,13.5,SECONDARY,align='center')
-text(0,475,288,21,'One matrix per KV head',15,SECONDARY,align='center')
+    text(x-7,229,121,26,label,19,bold=True,align='center')
+    rect(x,270,106,70,pale,color,1.3)
+    for i in range(1,5):
+        line([[x+i*106/5,270],[x+i*106/5,340]],color,.7)
+    for i in range(1,4):
+        line([[x,270+i*70/4],[x+106,270+i*70/4]],color,.7)
+    text(x-7,354,121,48,description,18,align='center')
+    text(x-7,417,121,26,precision,20,color,bold=True,align='center')
+arrow(289,280,319,280,INK,1.4,6)
 
-# 2. Group exact layer ranges without pretending a group is a single layer.
-text(321,49,283,23,'28-layer Qwen3-1.7B',16,SECONDARY,align='center')
-for top, layers, precision, color, pale, border, cell in (
-    (96,'Layers 1–7','K8 / V2',BLUE,'#DCE8F8','#9EB6D8','#EDF3FC'),
-    (221,'Layers 8–21','K4 / V2',SECONDARY,'#E3E8EF','#ACB8C8','#F1F4F8'),
-    (346,'Layers 22–28','K8 / V2',BLUE,'#DCE8F8','#9EB6D8','#EDF3FC'),
+# (b) A layer group is a simple rectangle, with explicit K and V labels.
+text(324,47,282,25,'Qwen3-1.7B (28 layers)',18,align='center')
+for top,layers,kbits,pale in (
+    (107,'Layers 1–7','K8',BLUE_PALE),
+    (229,'Layers 8–21','K4','#F2F2F2'),
+    (351,'Layers 22–28','K8',BLUE_PALE),
 ):
-    rect(339,top,247,100,pale,border,1.1)
-    rect(339,top,4,100,color)
-    text(350,top+6,225,26,layers,18,bold=True,align='center')
-    rect(353,top+38,144,25,cell,border,.8)
-    rect(502,top+38,70,25,cell,border,.8)
-    text(353,top+38,144,25,'Self-attention',15,align='center')
-    text(502,top+38,70,25,'FFN',15,align='center')
-    # Explicit K output ports make the per-layer codec choice visible.
-    # V2 is fixed independently of the K4/K8 assignment.
-    text(353,top+70,135,25,'Values: V2',15,GREEN)
-    rect(510,top+70,62,25,color,color,1)
-    text(510,top+70,62,25,precision.split(' / ')[0],19,'#FFFFFF',True,'center')
-for a,b in ((199,216),(324,341)): arrow(462.5,a,462.5,b,GRAY,1.5,5)
-text(321,463,283,22,'K8: 14 layers  ·  K4: 14 layers',15.5,align='center')
-text(321,484,283,16,'V2 in every layer',14,SECONDARY,align='center')
+    rect(337,top,253,81,pale,INK,1.3)
+    text(348,top+8,231,25,layers,20,bold=True,align='center')
+    text(358,top+43,110,25,'V2',19,GREEN,align='center')
+    text(490,top+43,78,25,kbits,19,BLUE if kbits=='K8' else INK,
+         bold=True,align='center')
+    line([[476,top+42],[476,top+68]],LINE,.8)
+for a,b in ((192,224),(314,346)):
+    arrow(463.5,a,463.5,b,INK,1.3,5)
+text(322,449,286,25,'14 K8 layers + 14 K4 layers',17,align='center')
+text(323,478,285,23,'V2 in all layers',17,GREEN,align='center')
 
-# Fixed selection routes, not tensor flow between quantizers.  The neutral K4
-# route stays left of the blue K8 bus so that only one crossover is required.
-# Its white break denotes no connection; the only dot is the true K8 merge.
-k4_lane, k8_lane = 608, 641
-k4_target, k8_target = 97, 228
-target_x = 638 + QUANTIZER_OFFSET
-line([[572,303.5],[k4_lane,303.5],[k4_lane,k4_target]],SECONDARY,1.8)
-arrow(k4_lane,k4_target,target_x,k4_target,SECONDARY,1.8,5.5)
-for source_y in (178.5,428.5):
-    # The white underlay also opens a clean output port in the layer-group box.
-    line([[572,source_y],[k8_lane,source_y]],'#FFFFFF',5.5)
-    line([[572,source_y],[k8_lane,source_y]],BLUE,2)
-line([[k8_lane,178.5],[k8_lane,428.5]],BLUE,2)
-circle(k8_lane,k8_target,3,BLUE)
-arrow(k8_lane,k8_target,target_x,k8_target,BLUE,2,5.5)
+# K4 is routed to Lloyd--Max; both K8 groups share the PU-K8 path.
+# A white gap at the crossing means no junction; the filled dot is a merge.
+k4_lane,k8_lane=613,654
+k4_target,k8_target=103,247
+line([[568,284.5],[k4_lane,284.5],[k4_lane,k4_target]],INK,1.4)
+arrow(k4_lane,k4_target,686,k4_target,INK,1.4,5)
+for source_y in (162.5,406.5):
+    line([[568,source_y],[k8_lane,source_y]],'#FFFFFF',5)
+    line([[568,source_y],[k8_lane,source_y]],BLUE,1.6)
+line([[k8_lane,162.5],[k8_lane,406.5]],BLUE,1.6)
+circle(k8_lane,k8_target,2.6,BLUE)
+arrow(k8_lane,k8_target,686,k8_target,BLUE,1.6,5)
 
-# 3. Exact FP16 levels plus modeled / sampled distributions on a common axis.
-stage3_shape_start = len(SCENE['shapes'])
-line([[648,62],[675,62]],INK,1.7)
-text(681,49,145,25,'Gaussian model',14,SECONDARY)
-line([[835,62],[862,62]],GRAY,1.3,True)
-text(868,49,125,25,'KV samples',14,SECONDARY)
-circle(1025,62,3.5,BLUE)
-text(1036,49,155,25,'Reconstruction levels',14,SECONDARY)
+# (c) Numerical plots, without card outlines or decorative header bands.
+line([[701,60],[728,60]],INK,1.6)
+text(736,47,126,25,'Gaussian model',16)
+line([[868,60],[895,60]],GRAY,1.6,True)
+text(903,47,110,25,'KV samples',16)
+circle(1043,60,3.1,BLUE)
+text(1054,47,152,25,'Levels',17)
 
-SCALE = math.sqrt(LEVELS['distribution']['d'])
-assert LEVELS['distribution']['d'] == DENSITY['head_dim'] == 128
-bins = np.array(DENSITY['bin_edges'])
-centers = (bins[:-1] + bins[1:]) / 2
-tau = LEVELS['pu_k8']['tau']
-tau_z = tau*SCALE
+SCALE=math.sqrt(LEVELS['distribution']['d'])
+assert LEVELS['distribution']['d']==DENSITY['head_dim']==128
+bins=np.array(DENSITY['bin_edges'])
+centers=(bins[:-1]+bins[1:])/2
+tau_z=LEVELS['pu_k8']['tau']*SCALE
 
-def quantizer(top, height, title, count, level_key, sample_key, color, baseline, peak,
+def quantizer(title_y,baseline,peak,title,count,level_key,sample_key,color,
               proposed=False):
-    rect(638,top,562,height,'#FFFFFF',LINE,1)
-    rect(638,top,562,30,BLUE_PALE if proposed else '#F3F5F7')
-    if proposed: rect(638,top,4,height,BLUE)
-    text(650,top+2,395,27,title,18.5,color if proposed else INK,True)
-    text(1053,top+2,133,27,f'{count} levels',14.5,SECONDARY,align='right')
-    # Use the former explanation-column space for a common, wider plot axis.
-    x0,x1=656,1173
+    text(696,title_y,373,27,title,20,color if proposed else INK,bold=True)
+    text(1091,title_y,125,27,f'{count} levels',17,SECONDARY,align='right')
+    x0,x1=718,1200
     def xp(z): return x0+(z+4.5)/9*(x1-x0)
     def yp(p): return baseline-p/.42*peak
     zs=np.linspace(-4.5,4.5,181)
     model=np.exp(-zs*zs/2)/math.sqrt(2*math.pi)
     if proposed:
-        # Two magnitude regions: the symmetric tails share the coarse spacing.
-        # Keep boundary coordinates exact when splitting the Gaussian fill.
-        for lo,hi,fill,tint in ((-4.5,-tau_z,COARSE_FILL,'#FBF4EE'),
-                               (-tau_z,tau_z,FINE_FILL,'#F0F5FC'),
-                               (tau_z,4.5,COARSE_FILL,'#FBF4EE')):
-            rect(xp(lo),top+53,xp(hi)-xp(lo),baseline-(top+53),tint)
+        for lo,hi,fill in ((-4.5,-tau_z,COARSE_FILL),
+                           (-tau_z,tau_z,FINE_FILL),
+                           (tau_z,4.5,COARSE_FILL)):
             region_z=np.r_[lo,zs[(zs>lo)&(zs<hi)],hi]
             region_p=np.exp(-region_z*region_z/2)/math.sqrt(2*math.pi)
             polygon([[xp(lo),baseline]]+
@@ -194,58 +161,64 @@ def quantizer(top, height, title, count, level_key, sample_key, color, baseline,
     else:
         polygon([[xp(-4.5),baseline]]+
                 [[xp(float(z)),yp(float(p))] for z,p in zip(zs,model)]+
-                [[xp(4.5),baseline]],'#D9E6F8' if color==BLUE else '#DCEDE4')
+                [[xp(4.5),baseline]],BLUE_PALE if color==BLUE else GREEN_PALE)
     group=DENSITY['groups'][sample_key]
     density=group.get('density',group.get('density_per_bin'))
     if density is None: raise KeyError(f'No density found: {list(group)}')
     assert len(density)==len(centers)
-    line([[xp(float(z)),yp(float(p))] for z,p in zip(centers,density)],GRAY,1.3,True)
-    line([[xp(float(z)),yp(float(p))] for z,p in zip(zs,model)],INK,1.7)
-    line([[x0,baseline],[x1+5,baseline]],SECONDARY,.8)
-    polygon([[x1+7,baseline],[x1+2,baseline-2],[x1+2,baseline+2]],SECONDARY)
+    # Put captured-data traces on top: near agreement must not hide the data.
+    line([[xp(float(z)),yp(float(p))] for z,p in zip(zs,model)],INK,1.6)
+    line([[xp(float(z)),yp(float(p))] for z,p in zip(centers,density)],GRAY,1.45,True)
+    arrow(x0,baseline,x1+6,baseline,INK,1,4)
     actual=np.array(LEVELS[level_key]['levels_fp16'])*SCALE
     assert len(actual)==count and np.all(np.diff(actual)>0)
     if proposed:
         for z in (-tau_z,tau_z):
-            line([[xp(z),top+53],[xp(z),baseline+6]],'#A2ADBD',.85,True)
-        # Draw every exact level. Taller, heavier ticks remain distinguishable
-        # where oversized circular markers would merge in the dense region.
-        for z in actual:
-            inner=abs(z)<tau_z
-            line([[xp(float(z)),baseline-5],[xp(float(z)),baseline+5.5]],
-                 BLUE if inner else COARSE,.9)
-        left, right=xp(-tau_z),xp(tau_z)
+            line([[xp(z),baseline-peak-10],[xp(z),baseline+7]],LINE,.85,True)
+        # Show one out of every eight actual levels per magnitude region,
+        # reflected about zero. Neutral, separated ticks replace the dense rug.
+        # The codec retains all 256 levels; only the displayed markers are subsampled.
+        positive=actual[actual>0]
+        shown_positive=np.concatenate([
+            positive[positive<tau_z][4::8],
+            positive[positive>=tau_z][4::8],
+        ])
+        shown=np.r_[-shown_positive[::-1],shown_positive]
+        assert len(shown)==32 and np.all(np.isin(shown,actual))
+        for z in shown:
+            line([[xp(float(z)),baseline-3.5],[xp(float(z)),baseline+3.5]],INK,1)
+        left,right=xp(-tau_z),xp(tau_z)
         for l,r,label in ((x0,left,'Coarse'),(left,right,'Fine'),(right,x1,'Coarse')):
-            text(l,top+32,r-l,23,label,14,BLUE if label=='Fine' else COARSE,
-                 True,'center')
-        text(x0,baseline+25,x1-x0,19,'Two spacings: Δ₀ < Δ₁',14,SECONDARY,align='center')
+            text(l,title_y+31,r-l,23,label,17,
+                 BLUE if label=='Fine' else COARSE,align='center')
+        text(920,baseline+30,18,22,'Δ',18)
+        text(933,baseline+40,12,16,'0',12)
+        text(950,baseline+30,20,22,'<',18)
+        text(975,baseline+30,18,22,'Δ',18)
+        text(988,baseline+40,12,16,'1',12)
     else:
-        for z in actual: circle(xp(float(z)),baseline,3.5,color,'#FFFFFF',.55)
+        for z in actual:
+            circle(xp(float(z)),baseline,3.1,color,'#FFFFFF',.45)
     for z in (-4,0,4):
-        line([[xp(z),baseline+1],[xp(z),baseline+4]],SECONDARY,.6)
-        text(xp(z)-13,baseline+(8 if proposed else 5),26,16,
-             str(z).replace('-','−'),12.5,SECONDARY,align='center')
-    text(x1+7,baseline+1,16,18,'z',14,SECONDARY,italic=True)
+        line([[xp(z),baseline+2],[xp(z),baseline+6]],INK,.75)
+        text(xp(z)-16,baseline+8,32,18,str(z).replace('-','−'),15,
+             SECONDARY,align='center')
+    text(x1+8,baseline-1,16,23,'z',17,italic=True)
 
-quantizer(82,120,'K4 · Lloyd–Max',16,'lloyd_max_k4','key_k4_middle',BLUE,177,48)
-quantizer(213,162,'K8 · PU-K8 (ours)',256,'pu_k8','key_k8_boundary',BLUE,326,54,
-          proposed=True)
-quantizer(386,114,'V2 · Lloyd–Max',4,'lloyd_max_v2','value_all',GREEN,477,44)
-
-# Translate stage 3 as one unit while preserving the dedicated routing channel.
-for shape in SCENE['shapes'][stage3_shape_start:]:
-    if 'x' in shape:
-        shape['x'] += QUANTIZER_OFFSET
-    if 'cx' in shape:
-        shape['cx'] += QUANTIZER_OFFSET
-    if 'points' in shape:
-        shape['points'] = [[x + QUANTIZER_OFFSET, y] for x, y in shape['points']]
+quantizer(89,191,53,'Lloyd–Max K4',16,'lloyd_max_k4','key_k4_middle',BLUE)
+quantizer(233,342,53,'PU-K8 (ours)',256,'pu_k8','key_k8_boundary',BLUE,True)
+quantizer(399,472,43,'Lloyd–Max V2',4,'lloyd_max_v2','value_all',GREEN)
 
 def render():
     # Keep the same two-column width, with a dedicated layer-to-codec channel.
+    # Liberation Sans uses Arial-compatible metrics; register installed fonts
+    # explicitly so an old Matplotlib font cache cannot silently change layout.
+    for font_path in font_manager.findSystemFonts():
+        font_manager.fontManager.addfont(str(font_path))
+    font_manager.findfont('Liberation Sans', fallback_to_default=False)
     inches=7.16
     factor=inches*72/W
-    plt.rcParams.update({'font.family':'Lato','pdf.fonttype':42,'ps.fonttype':42,
+    plt.rcParams.update({'font.family':'Liberation Sans','pdf.fonttype':42,'ps.fonttype':42,
                          'svg.fonttype':'none','savefig.facecolor':'white'})
     fig=plt.figure(figsize=(inches,inches*H/W))
     ax=fig.add_axes((0,0,1,1),xlim=(0,W),ylim=(H,0))
@@ -281,7 +254,7 @@ def render():
             path.write_text('\n'.join(row.rstrip() for row in path.read_text().splitlines())+'\n')
     plt.close(fig)
     write_pptx(SCENE,HERE/'kv_cache_overview.pptx')
-    print('Created overview PDF / SVG / PNG / editable PPTX; exact levels: 16 / 256 / 4.')
+    print('Created overview PDF / SVG / PNG / editable PPTX; codec levels: 16 / 256 / 4; PU-K8 displays 32 representative ticks.')
 
 if __name__=='__main__':
     render()

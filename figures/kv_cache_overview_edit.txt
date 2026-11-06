@@ -2,41 +2,48 @@ Current overview: flat, editable vector diagram (2026-11-06).
 
 Build:
   python figures/plot_kv_cache_overview.py
-Dependencies: numpy, matplotlib, Lato for PDF/SVG/PNG. The editable PowerPoint
-exporter overview_pptx.py uses only Python standard-library XML and ZIP modules.
+Dependencies: numpy, matplotlib, and Liberation Sans TrueType fonts for
+PDF/SVG/PNG. Liberation Sans has Arial-compatible metrics; the editable PPTX
+uses Arial. The PowerPoint exporter overview_pptx.py uses only Python's
+standard-library XML and ZIP modules.
 Outputs: kv_cache_overview.pdf, .svg, .png, .pptx. The paper includes the PDF.
 The PPTX contains native editable shapes and text, not a flattened bitmap.
 
-Visual design:
-  Three original stages retained: asymmetric KV index budget; Boundary layer
-  allocation; hardware-aware KV codecs. The K4 and V2 Lloyd–Max codecs remain
-  fixed; the proposed PU-K8 codec targets arithmetic indexing and HVX decoding
-  at K8 layers. This depicts a fixed mapping, not an optimal or adaptive codec
-  selection policy. Flat fills, consistent
-  typography, aligned rectangles, tensor grids, lines and mathematically
-  sampled distributions replace the previous generated raster illustration.
-  Key/value index bar is exactly 3:1 (average K6 / V2, excluding FP16 scales).
-  Qwen3-1.7B layers 1–7 and 22–28 use K8; 8–21 use K4; V2 throughout.
-  Layer-group K output ports connect directly to the selected codec headers:
-  the two K8 branches join at PU-K8; the K4 branch selects Lloyd–Max K4.
-  A white break at the single route crossover indicates no junction. Only
-  the true K8 merge has a dot. These depict fixed per-layer codec selection.
-  A dedicated routing channel replaces the old generic stage-2→3 arrow;
-  K8 layer groups have blue fills and K4 groups have slate fills, with solid
-  precision badges and matching outlines. Both K8 groups retain the same color.
-  The right-hand indexing/decoding boxes are removed to widen all three plots
-  from 351 to 517 scene units, preserving their shared standardized x axis.
-  K4/V2 reconstruction dots are larger. PU-K8 uses taller, heavier ticks so
-  all 256 levels remain visible without merging oversized circular markers.
-  PU-K8's central fine region is blue; both coarse tails share an orange hue.
-  Gaussian fills, region tints, labels and ticks use the same region colors.
-  K4/V2 curves have blue/green fills; curves and level marks stay above fills.
+Visual design (2026-11-06, simplified technical diagram):
+  Plain (a)/(b)/(c) titles replace the numbered tiles. No card headers,
+  accent bars, shadows, gradients, or stacked decorative tensor slices.
+  Thin outlines, straight connectors, two flat matrix grids and direct text
+  labels provide a conventional PowerPoint/block-diagram appearance.
+  The three original stages remain: asymmetric KV index budget; Boundary
+  allocation; hardware-aware KV codecs. The K4/V2 Lloyd--Max codecs stay fixed;
+  PU-K8 targets arithmetic indexing and HVX decoding in the K8 layers.
+  The drawing depicts a fixed mapping, not an optimal or adaptive policy.
+  Key/value index-storage bar is exactly 3:1 (average K6 / V2, excluding FP16
+  scales). Its eight-bit total is explicitly labeled as an average.
+  Qwen3-1.7B layers 1--7 and 22--28 use K8; 8--21 use K4; V2 throughout.
+  K outputs connect to their selected codec titles; both K8 branches merge
+  into PU-K8. The white gap at the one crossing means no connection, and only
+  the true K8 merge has a filled dot. Pale K8 fills distinguish those groups.
+  Quantizer plots use white backgrounds and the same standardized x axis.
+  PU-K8 uses 32 short neutral ticks sampled symmetrically from its 256 levels;
+  K4/V2 show all their levels as dots. The center fine region
+  is blue, both coarse tails use the same muted orange, and V2 uses green.
+  Gray dashed sample traces are drawn over the Gaussian model so that their
+  close agreement does not make the sampled evidence disappear.
+  The two-column figure dimensions are unchanged to preserve paper layout.
+  This is an AI-assisted, code-generated editable diagram. The visual style
+  does not claim manual authorship or remove the need to disclose actual AI
+  assistance under applicable publication rules.
 
 Data:
   kv_cache_overview_levels.json stores all 16/256/4 actual FP16 decoder levels,
   original source paths and hashes, the PU-K8 parameters and exact midpoint.
-  All 256 PU-K8 levels are plotted as ticks; K4/V2 levels are plotted as dots.
-  No decorative or selected subset of levels is used.
+  PU-K8 displays one of every eight levels in each positive magnitude region
+  (offset 4), reflected to the negative side: 32 actual level positions total.
+  The codec retains 256 levels; this subset is documented here and in the
+  plotting source. The paper caption omits the detailed distribution notes.
+  K4/V2 show all 16/4 actual levels as dots. The per-head dimension footer
+  is omitted from the overview. No decoder levels or density data are altered.
   Smooth curves: the design model N(0,1/128) in y, equivalently N(0,1) in
   z=sqrt(128)*y. This model is not fitted to the plotted samples.
   Gray traces: densities from captured Qwen3-1.7B W4A16 HTP FP16-KV outputs,

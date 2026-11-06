@@ -8,3 +8,7 @@
 *.fdb_latexmk
 *.synctex.gz
 conference_101719_lm8_repeat_ppl.pdf
+
+# Python bytecode cache
+__pycache__/
+*.pyc
