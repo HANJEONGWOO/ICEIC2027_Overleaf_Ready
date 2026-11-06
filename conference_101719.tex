@@ -137,7 +137,7 @@ The native HVX decoder recovers $r$ and $k$ from each stored byte and reconstruc
 \section{Experimental Methodology}
 Experiments use Qwen3-1.7B~\cite{qwen3} (W4A16) on a Galaxy S26 Ultra (SM8850), with QAIRT 2.48.0.260626 and the HTP backend in burst mode. Inference uses a single sequence; performance and PPL evaluations use a context capacity of 1024. PU-K8 and Lloyd--Max K8 are compared under matched masks in Odd and Boundary placement. Weights, activation encodings, rotations, norm correction, and K4/V2 paths remain fixed.
 
-Performance uses 897 prompt tokens and 128 generated tokens. Each invocation includes a full warm-up, a cache reset, and a measured session. TTFT excludes model loading; decode throughput is 127 divided by the total duration of the post-prefill autoregressive steps. The Lloyd--Max comparison uses ten measured sessions per configuration in counterbalanced order, with a ten-second pause between invocations. We report means and sample standard deviations, with improvements computed from group means. The same session logs separate host-observed QNN graph-call time from the remaining runner time.
+Performance uses 897 prompt tokens and 128 generated tokens. Each invocation includes a full warm-up, a cache reset, and a measured session. TTFT excludes model loading; decode throughput is 127 divided by the total duration of the post-prefill autoregressive steps. The Lloyd--Max comparison uses ten measured sessions per configuration in counterbalanced order, with a ten-second pause between invocations. We report means, with improvements computed from group means. The same session logs separate host-observed QNN graph-call time from the remaining runner time.
 
 Reference-window PPL is evaluated by teacher forcing on four reused WikiText-2~\cite{wikitext} windows of 1024 tokens, using the unchanged performance binaries. Each window is scored once per configuration, totaling 4092 target tokens per configuration. Aggregate perplexity is the exponential of the token-averaged negative log-likelihood (NLL) across all four windows. The Uniform K8 comparison additionally evaluates PPL on a separate four-document set under Odd placement.
 
@@ -152,7 +152,7 @@ We compare PU-K8 with Lloyd--Max K8, which has lower Gaussian scalar reconstruct
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{figures/kv_cache_performance.pdf}
-\caption{Boundary-placement performance and reference-window PPL. Timing: mean $\pm$ sample SD over 10 runs per configuration, with 897 prompt and 128 generated tokens. Percentages show changes from Lloyd--Max K8.}
+\caption{Boundary-placement performance and reference-window PPL. TTFT (ms) and throughput (tokens/s) are means over 10 runs per configuration, with 897 prompt and 128 generated tokens. Percentages show changes from Lloyd--Max K8.}
 \label{fig:performance}
 \end{figure}
 

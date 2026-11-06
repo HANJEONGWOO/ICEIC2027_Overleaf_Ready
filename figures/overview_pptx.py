@@ -291,7 +291,7 @@ def write_pptx(scene: dict[str, Any], path: str | Path) -> Path:
     _sub(presentation, "p:defaultTextStyle")
 
     slide = _node("p:sld")
-    content = _sub(slide, "p:cSld", name="KV cache quantization overview")
+    content = _sub(slide, "p:cSld", name=str(scene.get("title", "KV cache quantization overview")))
     tree = _sp_tree()
     content.append(tree)
     for i, item in enumerate(scene["shapes"], start=2):
@@ -315,7 +315,7 @@ def write_pptx(scene: dict[str, Any], path: str | Path) -> Path:
 
     core = _node("cp:coreProperties")
     _sub(core, "dc:title").text = str(scene.get("title", "KV cache quantization overview"))
-    _sub(core, "dc:subject").text = "Editable vector overview with calibrated quantization levels"
+    _sub(core, "dc:subject").text = str(scene.get("subject", "Editable vector overview with calibrated quantization levels"))
     _sub(core, "dc:creator").text = "ICEIC 2027 paper"
     _sub(core, "dc:description").text = "Native editable shapes and text generated from the shared overview scene."
     app = _node("ep:Properties")

@@ -1,4 +1,4 @@
-% English source SHA256: da14a832bea2d4e25b56290f22ff50d99fd86a8c2396503173daad87eb196882
+% English source SHA256: f1f274da5d94cc374c4780cf25323b03bb9669575e92c6e83a3a3f19770030a9
 % Korean review translation of conference_101719.tex, 2026-11-06.
 % Translation follows the English source; figure assets, equations and results are shared.
 % Figure-internal labels, author names/department names, and bibliography remain English.
@@ -136,7 +136,7 @@ K4에서 $\mathcal{L}_4^+$는 $j\in\{0,\ldots,7\}$로 인덱싱되는 양의 Llo
 \section{실험 방법}
 실험에는 Qwen3-1.7B~\cite{qwen3}(W4A16)를 사용하였으며, Galaxy S26 Ultra(SM8850)에서 실행하였다. QAIRT 2.48.0.260626과 버스트 모드의 HTP 백엔드를 사용하였다. 추론은 단일 시퀀스로 수행하며, 성능 및 PPL 평가의 컨텍스트 용량은 1024이다. Odd와 Boundary 배치에서 동일한 레이어 마스크를 적용하여 PU-K8과 Lloyd--Max K8을 비교하였다. 가중치, 활성값 인코딩, 회전, 노름 보정 및 K4/V2 경로는 고정하였다.
 
-성능 평가에는 프롬프트 897토큰과 생성 128토큰을 사용하였다. 각 실행은 전체 워밍업, 캐시 초기화, 측정 세션으로 구성된다. TTFT에는 모델 로딩 시간이 포함되지 않으며, 디코딩 처리량은 프리필 이후 자기회귀 단계의 총 소요 시간으로 127을 나누어 계산한다. Lloyd--Max 비교에서는 실행 순서의 영향을 상쇄하도록 순서를 배치하여 구성별로 10회의 측정 세션을 수행하였으며, 실행 사이에는 10초의 대기 시간을 두었다. 평균과 표본 표준편차를 보고하고, 개선율은 구성별 평균으로 계산하였다. 동일한 세션 로그에서 호스트가 관측한 QNN 그래프 호출 경과 시간과 나머지 실행 시간을 구분하였다.
+성능 평가에는 프롬프트 897토큰과 생성 128토큰을 사용하였다. 각 실행은 전체 워밍업, 캐시 초기화, 측정 세션으로 구성된다. TTFT에는 모델 로딩 시간이 포함되지 않으며, 디코딩 처리량은 프리필 이후 자기회귀 단계의 총 소요 시간으로 127을 나누어 계산한다. Lloyd--Max 비교에서는 실행 순서의 영향을 상쇄하도록 순서를 배치하여 구성별로 10회의 측정 세션을 수행하였으며, 실행 사이에는 10초의 대기 시간을 두었다. 평균을 보고하고, 개선율은 구성별 평균으로 계산하였다. 동일한 세션 로그에서 호스트가 관측한 QNN 그래프 호출 경과 시간과 나머지 실행 시간을 구분하였다.
 
 재사용한 WikiText-2~\cite{wikitext} 기준 구간 4개(각 1024토큰)의 PPL을 교사 강제(teacher forcing) 방식으로 평가하였다. 바이너리는 성능 평가와 동일하며, 구간별 1회 평가로 구성당 4092개의 대상 토큰을 채점하였다. 전체 PPL은 네 구간의 토큰 평균 음의 로그우도(NLL)에 지수 함수를 적용한 값이다. Uniform K8 비교는 Odd 배치의 별도 문서 4개에서도 PPL을 평가하였다.
 
@@ -151,7 +151,7 @@ PU-K8을 가우시안 모델에서 스칼라 복원의 MSE가 더 낮은 Lloyd--
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{figures/kv_cache_performance.pdf}
-\caption{Boundary 배치의 성능과 기준 구간 PPL. 실행 성능은 구성별 10회 측정의 평균 $\pm$ 표본 표준편차이며, 프롬프트 897토큰과 생성 128토큰을 사용하였다. 백분율은 Lloyd--Max K8 대비 변화율이다.}
+\caption{Boundary 배치의 성능과 기준 구간 PPL. TTFT(ms)와 처리량(tokens/s)은 프롬프트 897토큰과 생성 128토큰을 사용한 구성별 10회 측정의 평균이다. 백분율은 Lloyd--Max K8 대비 변화율이다.}
 \label{fig:performance}
 \end{figure}
 
