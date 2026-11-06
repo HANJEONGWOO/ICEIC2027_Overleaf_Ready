@@ -70,7 +70,7 @@ def heading(x, width, number, label):
 
 heading(0, 288, 1, 'Asymmetric KV budget')
 heading(321, 283, 2, 'Boundary allocation')
-heading(638 + QUANTIZER_OFFSET, 562, 3, 'Bit-width-aware quantizer selection')
+heading(638 + QUANTIZER_OFFSET, 562, 3, 'Hardware-aware KV codecs')
 for x in (304,):
     line([[x,55],[x,233]], LINE, .8)
     line([[x,269],[x,496]], LINE, .8)

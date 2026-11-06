@@ -38,7 +38,7 @@
 \hyphenation{quan-ti-za-tion de-quan-ti-za-tion code-book}
 
 \begin{document}
-\title{Bit-Width-Aware KV Cache Quantization\\for Mobile NPUs}
+\title{Hardware-Aware KV Cache Quantization\\for Mobile NPUs}
 % Author order and affiliations supplied by the authors.
 \author{\IEEEauthorblockN{Jeongwoo Han}
 \IEEEauthorblockA{Department of Digital Media\\
@@ -55,7 +55,7 @@ dongkun@skku.edu}
 \maketitle
 
 \begin{abstract}
-Key--value (KV) cache quantization reduces storage, but encoding and decoding overhead can limit its benefits on mobile neural processing units. We present a bit-width-aware design that retains Lloyd--Max for K4/V2 and uses Piecewise-Uniform K8 (PU-K8) for eight-bit keys. PU-K8 combines two-region reconstruction levels with arithmetic indexing and lookup-free Hexagon Vector eXtensions (HVX) decoding. We compare it with Lloyd--Max K8 under matched storage budgets and Odd and Boundary layer placements. We evaluate Qwen3-1.7B (W4A16) on a Galaxy S26 Ultra. Across ten warmed runs per configuration at a context capacity of 1024 tokens, PU-K8 reduces mean time to first token (TTFT) by 31.12--32.62\% and increases mean autoregressive decoding throughput by 13.61--14.41\%. On four reused WikiText-2 reference windows, perplexity (PPL) is 1.81\% higher under Odd placement and 0.45\% lower under Boundary placement. A separate four-document held-out comparison yields 11.28\% lower perplexity than a uniform quantizer, with similar observed throughput. Needle-in-a-Haystack retrieval at 1K--8K capacities yields 93.5\% answer-code extraction accuracy for Boundary PU-K8, versus 95.5\% for Boundary Lloyd--Max K8 and 81.0\% for K4/V4. These results demonstrate reduced codec overhead with placement-dependent quality in the evaluated mobile setting.
+Key--value (KV) cache quantization reduces storage, but encoding and decoding overhead can limit its benefits on mobile neural processing units. We present a hardware-aware K8 codec that combines Piecewise-Uniform K8 (PU-K8) reconstruction levels with arithmetic indexing and lookup-free Hexagon Vector eXtensions (HVX) decoding. This design targets the eight-bit key path of a mixed-precision cache, retaining Lloyd--Max for K4/V2. We compare it with Lloyd--Max K8 under matched storage budgets and Odd and Boundary layer placements. We evaluate Qwen3-1.7B (W4A16) on a Galaxy S26 Ultra. Across ten warmed runs per configuration at a context capacity of 1024 tokens, PU-K8 reduces mean time to first token (TTFT) by 31.12--32.62\% and increases mean autoregressive decoding throughput by 13.61--14.41\%. On four reused WikiText-2 reference windows, perplexity (PPL) is 1.81\% higher under Odd placement and 0.45\% lower under Boundary placement. A separate four-document held-out comparison yields 11.28\% lower perplexity than a uniform quantizer, with similar observed throughput. Needle-in-a-Haystack retrieval at 1K--8K capacities yields 93.5\% answer-code extraction accuracy for Boundary PU-K8, versus 95.5\% for Boundary Lloyd--Max K8 and 81.0\% for K4/V4. These results show that codec implementation affects inference efficiency at a fixed KV cache budget, with quality depending on placement.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -65,14 +65,14 @@ KV cache, quantization, mobile NPU, piecewise-uniform quantization, Hexagon HVX
 \section{Introduction}
 Key--value (KV) cache quantization reduces storage and data movement, but encoding and decoding overhead can limit its benefits for mobile inference. KIVI motivates asymmetric key/value quantization~\cite{kivi}, while TurboQuant explores rotation-based scalar quantization~\cite{turboquant}. Practical deployment therefore requires evaluating codec costs alongside quantization error.
 
-Our work builds on a TurboQuant implementation in the Qualcomm AI Hub Models pipeline. Its inherited Lloyd--Max encoder uses comparison trees and reconstruction-level selection subgraphs, while lookup-table (LUT) decoding requires table lookup and layout conversion. We investigate whether piecewise-uniform reconstruction levels can simplify both paths while maintaining useful language-model quality.
+Our work targets the K8 codec in a TurboQuant implementation in the Qualcomm AI Hub Models pipeline. Its Lloyd--Max encoder uses comparison trees and reconstruction-level selection subgraphs, while lookup-table (LUT) decoding requires table lookup and layout conversion. These costs motivate designing the quantization levels and their execution paths together.
 
-We present a bit-width-aware KV cache design that retains Lloyd--Max for K4/V2 and uses Piecewise-Uniform K8 (PU-K8) for eight-bit keys. Building on piecewise quantization approaches such as PWLQ~\cite{pwlq} and PTQ4ViT~\cite{ptq4vit}, PU-K8 uses two-region reconstruction levels for arithmetic indexing and HVX decoding. Our contribution is this hardware-oriented implementation for a rotated mixed-precision KV cache, preserving the existing byte format and explicit FP16 rounding, together with controlled on-device comparisons against Lloyd--Max K8 and a single-spacing uniform baseline. Figure~\ref{fig:overview} summarizes the overall design.
+Building on piecewise quantization approaches such as PWLQ~\cite{pwlq} and PTQ4ViT~\cite{ptq4vit}, our contributions are twofold. \emph{K8 codec design and implementation:} Piecewise-Uniform K8 (PU-K8) combines two-region levels with arithmetic indexing and lookup-free HVX decoding in a rotated mixed-precision cache, preserving the existing byte format and explicit FP16 rounding. K4/V2 retain Lloyd--Max. \emph{On-device evaluation:} matched comparisons with Lloyd--Max K8 and a separate single-spacing uniform baseline quantify execution cost and quality trade-offs under fixed storage budgets and layer masks. Figure~\ref{fig:overview} summarizes the design.
 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/kv_cache_overview.pdf}
-\caption{Bit-width-aware KV cache design with Boundary placement; connectors map each layer group's K precision to its quantizer. The right panel shows the Gaussian design model and all frozen FP16 reconstruction levels (16/256/4 for K4/K8/V2). Gray traces use captured Qwen3-1.7B KV samples with CPU-emulated normalization and rotation, plotted as $z=\sqrt{d}\,y$ with $d=128$.}
+\caption{Hardware-aware K8 codec in a mixed-precision KV cache with Boundary placement. Connectors map each layer group's K precision to its fixed codec; K4/V2 retain Lloyd--Max. The right panel shows the Gaussian design model and all frozen FP16 reconstruction levels (16/256/4 for K4/K8/V2). Gray traces use captured Qwen3-1.7B KV samples with CPU-emulated normalization and rotation, plotted as $z=\sqrt{d}\,y$ with $d=128$.}
 \label{fig:overview}
 \end{figure*}
 
@@ -89,12 +89,12 @@ where $Q$, $K$, and $V$ are queries, keys, and values, and $d$ is the key dimens
 \subsection{Layer-Wise Quantization Sensitivity}
 KV quantization sensitivity varies across layers~\cite{kvtuner}, motivating higher precision in selected layers under a fixed cache budget. We mix K8 and K4 to maintain average K6 precision, with V2 throughout. Odd and Boundary are tested placements, not presumed optima; comparisons use matched masks.
 
-\subsection{Packing and Scalar-Index Costs}
-Two- and four-bit codes divide a byte evenly, whereas eight-bit codes use direct byte storage. Three-, five-, six-, and seven-bit codes may cross byte boundaries and need fragment assembly. Separately, the inherited Lloyd--Max encoder incurs bit-width-dependent comparison-tree and reconstruction-level selection costs. PU-K8 uses byte storage and arithmetic indexing and decoding; K4/V2 retain packing overhead. Thus, nominal bit width alone does not determine execution cost.
+\subsection{Codec Execution Costs}
+In the inherited K8 implementation, Lloyd--Max encoding uses boundary comparisons and reconstruction-level selection, while LUT decoding loads the selected levels. Piecewise-uniform levels enable arithmetic indexing and native HVX reconstruction. Both K8 codecs store one byte per coordinate; K4/V2 retain their existing packed paths. Thus, the quantization-level structure and its execution path affect codec cost even at the same storage precision.
 
 % Start the method overview with enough room below its two-column figure.
 \Needspace{12\baselineskip}
-\section{Bit-Width-Aware Quantization}
+\section{Hardware-Aware K8 Codec Design}
 \label{sec:method}
 \subsection{Overview}
 The three panels in Fig.~\ref{fig:overview} connect the storage budget to the deployed codecs. In the left panel, $B_K$ and $B_V$ denote key and value index-storage budgets, so $B_{KV}=B_K+B_V$ excludes FP16 scales. The cache dimensions are token count $T$, KV-head count $n_{\mathrm{heads}}$, and head dimension $d_{\mathrm{head}}$. Assigning K8 to half of the layers and K4 to the rest gives an average key precision of six bits; values use V2 throughout.
@@ -236,7 +236,7 @@ These isolated probes differ in shape and execution conditions from the full mod
 \newpage
 \section{Conclusion}
 
-On the evaluated mobile NPU, arithmetic PU-K8 with Lloyd--Max K4/V2 reduces mean TTFT by 31--33\% and increases decode throughput by about 14\% versus Lloyd--Max K8. Reference-window PPL depends on placement; Boundary PU-K8 achieves 93.5\% NIAH accuracy at 1K--8K capacities. Further evaluation requires larger independent datasets, additional models and devices, and broader long-context tasks.
+KV cache efficiency depends on codec execution cost as well as storage precision. On the evaluated mobile NPU, PU-K8 reduces mean TTFT by 31--33\% and increases decode throughput by about 14\% versus Lloyd--Max K8. Reference-window PPL depends on placement; Boundary PU-K8 achieves 93.5\% NIAH accuracy at 1K--8K capacities. Further evaluation requires larger independent datasets, additional models and devices, and broader long-context tasks.
 
 \begin{thebibliography}{00}
 \bibitem{kivi} Z. Liu \emph{et al.}, ``KIVI: A tuning-free asymmetric 2bit quantization for KV cache,'' arXiv:2402.02750, 2024.

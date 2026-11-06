@@ -1,4 +1,4 @@
-% English source SHA256: 97440b0e462f322d439478b6e66afec460b9e60627fd66afbf8e46b0e8c99aa8
+% English source SHA256: 86f9a5d9cc0c7bc4150ffa5d924844cbc8b5ba1951522fbfe7ccbff0b069483f
 % Korean review translation of conference_101719.tex, 2026-11-06.
 % Translation follows the English source; figure assets, equations and results are shared.
 % Figure-internal labels, author names/department names, and bibliography remain English.
@@ -38,7 +38,7 @@
   \renewcommand{\refname}{참고문헌}%
 }
 \begin{document}
-\title{모바일 NPU를 위한\\비트 폭 기반 KV 캐시 양자화}
+\title{모바일 NPU를 위한\\하드웨어 인지형 KV 캐시 양자화}
 \author{\IEEEauthorblockN{Jeongwoo Han}
 \IEEEauthorblockA{Department of Digital Media\\
 and Communications Engineering\\
@@ -54,7 +54,7 @@ dongkun@skku.edu}
 \maketitle
 
 \begin{abstract}
-키--값(KV) 캐시 양자화는 저장량을 줄이지만, 인코딩과 디코딩 오버헤드가 모바일 신경망 처리 장치(NPU)에서 그 이점을 제한할 수 있다. 본 논문에서는 K4/V2에 Lloyd--Max를 유지하고 8비트 키에는 구간별 균일 양자화기인 Piecewise-Uniform K8(PU-K8)을 사용하는 비트 폭 기반 설계를 제안한다. PU-K8은 두 구간의 복원 레벨을 산술 인덱싱 및 테이블 조회가 없는 Hexagon Vector eXtensions(HVX) 디코딩과 결합한다. 동일한 저장 예산과 Odd 및 Boundary 레이어 배치에서 Lloyd--Max K8과 비교하였다. Galaxy S26 Ultra에서 Qwen3-1.7B(W4A16)를 평가하였다. 컨텍스트 용량 1024토큰에서 구성별로 워밍업 후 10회 측정한 결과, PU-K8은 평균 첫 토큰 생성 시간(TTFT)을 31.12--32.62\% 줄이고 평균 자기회귀 디코딩 처리량을 13.61--14.41\% 높였다. 재사용한 WikiText-2 기준 구간 4개에서 퍼플렉서티(PPL)는 Odd 배치에서 1.81\% 높고 Boundary 배치에서 0.45\% 낮았다. 별도의 홀드아웃 문서 4개를 사용한 비교에서는 균일 양자화기보다 PPL이 11.28\% 낮았으며, 관측된 처리량은 유사하였다. 1K--8K 용량의 Needle-in-a-Haystack 검색에서 정답 코드 추출 정확도는 Boundary PU-K8이 93.5\%, Boundary Lloyd--Max K8이 95.5\%, K4/V4가 81.0\%였다. 이 결과는 평가한 모바일 환경에서 코덱 오버헤드가 감소하고 품질은 레이어 배치에 따라 달라짐을 보여준다.
+키--값(KV) 캐시 양자화는 저장량을 줄이지만, 인코딩과 디코딩 오버헤드가 모바일 신경망 처리 장치(NPU)에서 그 이점을 제한할 수 있다. 본 논문에서는 하드웨어 실행 특성을 고려하여 구간별 균일 양자화기인 Piecewise-Uniform K8(PU-K8)의 복원 레벨을 산술 인덱싱 및 테이블 조회가 없는 Hexagon Vector eXtensions(HVX) 디코딩과 결합한 K8 코덱을 제안한다. 혼합 정밀도 캐시의 8비트 키 경로를 대상으로 하며, K4/V2에는 Lloyd--Max를 유지한다. 동일한 저장 예산과 Odd 및 Boundary 레이어 배치에서 Lloyd--Max K8과 비교하였다. Galaxy S26 Ultra에서 Qwen3-1.7B(W4A16)를 평가하였다. 컨텍스트 용량 1024토큰에서 구성별로 워밍업 후 10회 측정한 결과, PU-K8은 평균 첫 토큰 생성 시간(TTFT)을 31.12--32.62\% 줄이고 평균 자기회귀 디코딩 처리량을 13.61--14.41\% 높였다. 재사용한 WikiText-2 기준 구간 4개에서 퍼플렉서티(PPL)는 Odd 배치에서 1.81\% 높고 Boundary 배치에서 0.45\% 낮았다. 별도의 홀드아웃 문서 4개를 사용한 비교에서는 균일 양자화기보다 PPL이 11.28\% 낮았으며, 관측된 처리량은 유사하였다. 1K--8K 용량의 Needle-in-a-Haystack 검색에서 정답 코드 추출 정확도는 Boundary PU-K8이 93.5\%, Boundary Lloyd--Max K8이 95.5\%, K4/V4가 81.0\%였다. 이 결과는 고정된 KV 캐시 예산에서도 코덱 구현에 따라 추론 효율이 달라지며, 품질은 레이어 배치에 의존함을 보여준다.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -64,14 +64,14 @@ KV 캐시, 양자화, 모바일 NPU, 구간별 균일 양자화, Hexagon HVX
 \section{서론}
 키--값(KV) 캐시 양자화는 저장량과 데이터 이동을 줄이지만, 인코딩과 디코딩 오버헤드가 모바일 추론에서 그 이점을 제한할 수 있다. KIVI는 키와 값의 비대칭 양자화에 대한 근거를 제시하며~\cite{kivi}, TurboQuant는 회전 기반 스칼라 양자화를 다룬다~\cite{turboquant}. 따라서 실제 배포에서는 양자화 오차와 함께 코덱의 실행 비용도 평가해야 한다.
 
-본 연구는 Qualcomm AI Hub Models 파이프라인의 TurboQuant 구현을 기반으로 한다. 기존 Lloyd--Max 인코더는 비교 트리와 복원 레벨 선택 서브그래프를 사용하며, 룩업 테이블(LUT) 디코딩에는 테이블 조회와 데이터 배치 변환이 필요하다. 본 연구에서는 구간별로 균일한 복원 레벨을 사용하여 언어 모델의 품질을 실용적인 수준으로 유지하면서 두 경로를 단순화할 수 있는지 살펴본다.
+본 연구는 Qualcomm AI Hub Models 파이프라인의 TurboQuant 구현에서 K8 코덱을 대상으로 한다. 기존 Lloyd--Max 인코더는 비교 트리와 복원 레벨 선택 서브그래프를 사용하며, 룩업 테이블(LUT) 디코딩에는 테이블 조회와 데이터 배치 변환이 필요하다. 이러한 비용을 고려하여 양자화 레벨과 실행 경로를 함께 설계한다.
 
-K4/V2에는 Lloyd--Max를 유지하고 8비트 키에는 Piecewise-Uniform K8(PU-K8)을 사용하는 비트 폭 기반 KV 캐시 설계를 제안한다. PWLQ~\cite{pwlq}와 PTQ4ViT~\cite{ptq4vit} 등의 구간별 양자화 접근을 바탕으로, PU-K8은 두 구간의 복원 레벨을 이용해 산술 인덱싱과 HVX 디코딩을 수행한다. 본 연구의 기여는 기존 바이트 형식과 명시적인 FP16 반올림을 유지하는 회전 기반 혼합 정밀도 KV 캐시의 하드웨어 지향 구현과, Lloyd--Max K8 및 단일 간격의 균일 양자화 기준선에 대한 통제된 실기기 비교이다. 그림~\ref{fig:overview}는 전체 설계를 요약한다.
+PWLQ~\cite{pwlq}와 PTQ4ViT~\cite{ptq4vit} 등의 구간별 양자화 접근을 바탕으로, 두 가지 기여를 제시한다. \emph{K8 코덱 설계 및 구현:} Piecewise-Uniform K8(PU-K8)은 회전 기반 혼합 정밀도 캐시에서 두 구간의 레벨을 산술 인덱싱 및 LUT 없는 HVX 디코딩과 결합하며, 기존 바이트 형식과 명시적인 FP16 반올림을 유지한다. K4/V2에는 Lloyd--Max를 유지한다. \emph{실기기 평가:} 고정된 저장 예산과 레이어 마스크에서 Lloyd--Max K8과 비교하고, 별도의 단일 간격 균일 양자화 기준선 비교를 통해 실행 비용과 품질의 절충 관계를 평가한다. 그림~\ref{fig:overview}는 전체 설계를 요약한다.
 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/kv_cache_overview.pdf}
-\caption{Boundary 배치를 사용하는 비트 폭 기반 KV 캐시 설계. 연결선은 각 레이어 그룹의 K 정밀도를 해당 양자화기에 연결한다. 오른쪽 패널에는 설계에 사용한 가우시안 모델과 고정된 FP16 복원 레벨 전체(K4/K8/V2 각각 16/256/4개)를 표시하였다. 회색 곡선은 수집한 Qwen3-1.7B KV 샘플에 CPU로 정규화와 회전을 모사한 결과이며, $d=128$에서 $z=\sqrt{d}\,y$로 표시하였다.}
+\caption{Boundary 배치의 혼합 정밀도 KV 캐시에 통합한 하드웨어 인지형 K8 코덱. 연결선은 각 레이어 그룹의 K 정밀도를 고정된 코덱에 연결하며, K4/V2에는 Lloyd--Max를 유지한다. 오른쪽 패널에는 설계에 사용한 가우시안 모델과 고정된 FP16 복원 레벨 전체(K4/K8/V2 각각 16/256/4개)를 표시하였다. 회색 곡선은 수집한 Qwen3-1.7B KV 샘플에 CPU로 정규화와 회전을 모사한 결과이며, $d=128$에서 $z=\sqrt{d}\,y$로 표시하였다.}
 \label{fig:overview}
 \end{figure*}
 
@@ -88,10 +88,10 @@ K4/V2에는 Lloyd--Max를 유지하고 8비트 키에는 Piecewise-Uniform K8(PU
 \subsection{레이어별 양자화 민감도}
 KV 양자화 민감도는 레이어마다 다르므로~\cite{kvtuner}, 고정된 캐시 예산에서 일부 레이어에 더 높은 정밀도를 배정할 수 있다. 본 연구에서는 K8과 K4를 혼합하여 평균 K6 정밀도를 유지하고, 모든 값에는 V2를 사용한다. Odd와 Boundary는 실험한 배치 방식이며 최적이라고 가정하지 않는다. 비교에는 동일한 레이어 마스크를 사용한다.
 
-\subsection{패킹 및 스칼라 인덱싱 비용}
-2비트와 4비트 코드는 한 바이트를 나누어 빈틈없이 저장할 수 있고, 8비트 코드는 바이트 단위로 직접 저장한다. 3, 5, 6, 7비트 코드는 바이트 경계를 넘을 수 있어 분할된 비트를 조합해야 한다. 이와 별도로 기존 Lloyd--Max 인코더에는 비트 폭에 따라 달라지는 비교 트리와 복원 레벨 선택 비용이 발생한다. PU-K8은 바이트 단위 저장과 산술 인덱싱·디코딩을 사용하며, K4/V2에는 패킹 오버헤드가 남는다. 따라서 명목상 비트 폭만으로 실행 비용이 결정되지는 않는다.
+\subsection{코덱 실행 비용}
+기존 K8 구현에서 Lloyd--Max 인코딩은 경계 비교와 복원 레벨 선택을 사용하고, LUT 디코딩은 선택된 레벨을 읽는다. 구간별로 균일한 레벨을 사용하면 산술 인덱싱과 네이티브 HVX 복원이 가능하다. 두 K8 코덱은 모두 좌표당 한 바이트를 저장하며, K4/V2는 기존 패킹 경로를 유지한다. 따라서 동일한 저장 정밀도에서도 양자화 레벨의 구조와 실행 경로에 따라 코덱 비용이 달라진다.
 
-\section{비트 폭 기반 양자화}
+\section{하드웨어 인지형 K8 코덱 설계}
 \label{sec:method}
 \subsection{개요}
 그림~\ref{fig:overview}의 세 패널은 저장 예산과 실제 코덱의 관계를 보여준다. 왼쪽 패널의 $B_K$와 $B_V$는 키와 값의 인덱스 저장 예산을 뜻하므로, $B_{KV}=B_K+B_V$에는 FP16 스케일이 포함되지 않는다. 캐시의 각 차원은 토큰 수 $T$, KV 헤드 수 $n_{\mathrm{heads}}$, 헤드 차원 $d_{\mathrm{head}}$이다. 레이어 절반에 K8을, 나머지에 K4를 배정하면 평균 키 정밀도는 6비트가 되며, 값에는 모두 V2를 사용한다.
@@ -227,7 +227,7 @@ PU-K8 & 23.61 & \textbf{20.17} & 14.58\\
 \raggedend
 \newpage
 \section{결론}
-평가한 모바일 NPU에서 Lloyd--Max K4/V2와 산술 PU-K8을 함께 사용하면, Lloyd--Max K8 대비 평균 TTFT가 31--33\% 감소하고 디코딩 처리량은 약 14\% 증가한다. 기준 구간 PPL은 배치에 따라 달라지며, Boundary PU-K8은 1K--8K 컨텍스트 용량에서 93.5\%의 NIAH 정확도를 보였다. 추가 평가에는 더 큰 독립 데이터셋, 다양한 모델과 기기, 그리고 더 폭넓은 긴 컨텍스트 과제가 필요하다.
+KV 캐시의 효율은 저장 정밀도와 함께 코덱 실행 비용에 좌우된다. 평가한 모바일 NPU에서 PU-K8은 Lloyd--Max K8 대비 평균 TTFT를 31--33\% 줄이고 디코딩 처리량을 약 14\% 높였다. 기준 구간 PPL은 배치에 따라 달라지며, Boundary PU-K8은 1K--8K 컨텍스트 용량에서 93.5\%의 NIAH 정확도를 보였다. 추가 평가에는 더 큰 독립 데이터셋, 다양한 모델과 기기, 그리고 더 폭넓은 긴 컨텍스트 과제가 필요하다.
 
 \begin{thebibliography}{00}
 \bibitem{kivi} Z. Liu \emph{et al.}, ``KIVI: A tuning-free asymmetric 2bit quantization for KV cache,'' arXiv:2402.02750, 2024.

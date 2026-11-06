@@ -1,4 +1,4 @@
-Current overview: flat, editable vector diagram (2026-11-05).
+Current overview: flat, editable vector diagram (2026-11-06).
 
 Build:
   python figures/plot_kv_cache_overview.py
@@ -9,7 +9,10 @@ The PPTX contains native editable shapes and text, not a flattened bitmap.
 
 Visual design:
   Three original stages retained: asymmetric KV index budget; Boundary layer
-  allocation; fixed bit-width-aware codec assignment. Flat fills, consistent
+  allocation; hardware-aware KV codecs. The K4 and V2 Lloyd–Max codecs remain
+  fixed; the proposed PU-K8 codec targets arithmetic indexing and HVX decoding
+  at K8 layers. This depicts a fixed mapping, not an optimal or adaptive codec
+  selection policy. Flat fills, consistent
   typography, aligned rectangles, tensor grids, lines and mathematically
   sampled distributions replace the previous generated raster illustration.
   Key/value index bar is exactly 3:1 (average K6 / V2, excluding FP16 scales).
